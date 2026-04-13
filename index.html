@@ -2227,6 +2227,7 @@ function startLevel(lvlId) {
 function showSelfAssessment(phase, lvlId) {
   const el = document.getElementById('screen-game');
   showScreen('game');
+  if (teacherMode) updateTeacherPanel();
   
   el.innerHTML = `
     <div class="card card-glow">
@@ -2249,6 +2250,7 @@ function showSelfAssessment(phase, lvlId) {
       <div class="flex justify-between text-xs text-muted">
         <span>Gar nicht</span><span>Sehr gut</span>
       </div>
+      ${teacherMode ? `<button class="btn btn-secondary btn-block mt-2" style="border-color:#e17055;color:#e17055;" onclick="teacherSkipPhase('${phase}', ${lvlId})">🎓 Überspringen →</button>` : ''}
     </div>
     ${phase === 'before' ? `
     <div class="card">
@@ -2265,7 +2267,8 @@ function submitAssessment(phase, lvlId, value) {
   saveState();
 
   if (phase === 'before') {
-    renderTask();
+    // NEW FLOW: Simulation comes BEFORE tasks
+    showSimulation();
   } else {
     finishLevel(lvlId);
   }
@@ -2277,8 +2280,8 @@ function renderTask() {
   if (teacherMode) updateTeacherPanel();
 
   if (currentTaskIdx >= currentTasks.length) {
-    // Show simulation first, then self-assessment after
-    showSimulation();
+    // All tasks done → self-assessment after → finish
+    showSelfAssessment('after', currentLevelData.id);
     return;
   }
 
@@ -2661,50 +2664,70 @@ function handleCorrect(task, taskKey) {
   S.answers.push({
     level: currentLevelData.id,
     task: currentTaskIdx,
+    question: task.q,
     correct: true,
     attempts,
     hints,
     xp,
+    explain: task.explain,
     timestamp: Date.now()
   });
 
-  showFeedback(true, task.explain, xp);
+  showFeedback(true, task, xp);
 }
 
 function handleIncorrect(task, taskKey) {
   const attempts = S.levels[currentLevelData.id].taskAttempts[taskKey] || 1;
-  if (attempts >= 3) {
-    S.levels[currentLevelData.id].taskResults[taskKey] = false;
-    S.answers.push({
-      level: currentLevelData.id,
-      task: currentTaskIdx,
-      correct: false,
-      attempts,
-      hints: S.levels[currentLevelData.id].hintsUsed[taskKey] || 0,
-      xp: 0,
-      timestamp: Date.now()
-    });
-    showFeedback(false, task.explain, 0, true);
-  } else {
-    showFeedback(false, 'Das war leider nicht richtig. Versuche es noch einmal!', 0, false);
-  }
+  S.levels[currentLevelData.id].taskResults[taskKey] = false;
+  S.answers.push({
+    level: currentLevelData.id,
+    task: currentTaskIdx,
+    question: task.q,
+    correct: false,
+    attempts,
+    hints: S.levels[currentLevelData.id].hintsUsed[taskKey] || 0,
+    xp: 0,
+    explain: task.explain,
+    timestamp: Date.now()
+  });
+  showFeedback(false, task, 0);
 }
 
-function showFeedback(correct, explain, xp, final = true) {
+function showFeedback(correct, task, xp) {
   const area = document.getElementById('feedbackArea');
+  
+  // Build correct answer display for incorrect answers
+  let correctAnswerHTML = '';
+  if (!correct) {
+    if (task.type === 'choice') {
+      correctAnswerHTML = `<p class="text-sm fw-bold mt-1" style="color:var(--success);">✅ Richtige Antwort: ${task.options[task.correct]}</p>`;
+    } else if (task.type === 'calc' || task.type === 'slider') {
+      correctAnswerHTML = `<p class="text-sm fw-bold mt-1" style="color:var(--success);">✅ Richtige Antwort: ${task.answer} ${task.unit}</p>`;
+    } else if (task.type === 'diagram') {
+      const ci = task.options.findIndex(o => o.correct);
+      correctAnswerHTML = `<p class="text-sm fw-bold mt-1" style="color:var(--success);">✅ Richtig: ${task.options[ci]?.label || ''}</p>`;
+    } else if (task.type === 'sort') {
+      correctAnswerHTML = `<p class="text-sm fw-bold mt-1" style="color:var(--success);">✅ Richtige Reihenfolge:</p>` + task.items.map((it,i) => `<p class="text-xs" style="color:var(--success);">${i+1}. ${it}</p>`).join('');
+    } else if (task.type === 'fillin') {
+      correctAnswerHTML = `<p class="text-sm fw-bold mt-1" style="color:var(--success);">✅ Richtige Antworten:</p>` + task.blanks.map((b,i) => `<p class="text-xs" style="color:var(--success);">Lücke ${i+1}: ${b.correct}</p>`).join('');
+    } else if (task.type === 'match') {
+      correctAnswerHTML = `<p class="text-sm fw-bold mt-1" style="color:var(--success);">✅ Richtige Zuordnung:</p>` + task.pairs.map(p => `<p class="text-xs" style="color:var(--success);">${p[0]} → ${p[1]}</p>`).join('');
+    }
+  }
 
   area.innerHTML = `
     <div class="card" style="border-color: ${correct ? 'var(--success)' : 'var(--danger)'};">
       ${avatarBubble(
-        correct ? getCorrectPhrase() : (final ? getIncorrectPhrase() : getIncorrectPhrase()),
-        correct ? 'cheer' : (final ? 'sad' : 'think')
+        correct ? getCorrectPhrase() : getIncorrectPhrase(),
+        correct ? 'cheer' : 'sad'
       )}
       ${correct ? `<p class="text-accent fw-bold mt-1" style="text-align:center;">+${xp} XP ⚡</p>` : ''}
+      ${correctAnswerHTML}
       <div class="help-panel mt-1">
-        <h4>${correct ? '📖 Erklärung' : (final ? '📖 Die richtige Lösung' : '💡 Tipp')}</h4>
-        <p class="text-sm">${explain}</p>
+        <h4>📖 ${correct ? 'Erklärung' : 'Die richtige Lösung'}</h4>
+        <p class="text-sm">${task.explain}</p>
       </div>
-      ${final || correct ? `<button class="btn btn-primary btn-block mt-2" onclick="nextTask()">Weiter →</button>` : `<button class="btn btn-secondary btn-block mt-2" onclick="renderTask()">Nochmal versuchen 💪</button>`}
+      <button class="btn btn-primary btn-block mt-2" onclick="nextTask()">Weiter →</button>
     </div>
   `;
   document.getElementById('hintArea').innerHTML = '';
@@ -2768,6 +2791,7 @@ function showHint() {
 function showSimulation() {
   const el = document.getElementById('screen-game');
   const sim = currentLevelData.sim;
+  if (teacherMode) updateTeacherPanel();
 
   el.innerHTML = `
     <div class="card card-glow">
@@ -2781,30 +2805,30 @@ function showSimulation() {
       <div id="simControls" class="sim-controls"></div>
       <div class="energy-bars mt-1" id="energyBars"></div>
     </div>
-    <button class="btn btn-primary btn-block mt-2" onclick="endSimulation()">Weiter zur Auswertung →</button>
+    <button class="btn btn-primary btn-block mt-2" onclick="endSimulation()">Weiter zu den Aufgaben →</button>
+    ${teacherMode ? `<button class="btn btn-secondary btn-block mt-1" style="border-color:#e17055;color:#e17055;" onclick="teacherSkipToFinish()">🎓 Direkt zum nächsten Level →</button>` : ''}
   `;
 
   initSimulation(sim.type);
 }
 
 function initSimulation(type) {
+  if (currentAnimId) { cancelAnimationFrame(currentAnimId); currentAnimId = null; }
   const canvas = document.getElementById('simCanvas');
   const ctx = canvas.getContext('2d');
   const controls = document.getElementById('simControls');
   const bars = document.getElementById('energyBars');
-  let animId = null;
-  let simTime = 0;
+  let simRunning = false;
 
   // HiDPI / Retina support for iPad
   const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.parentElement.getBoundingClientRect();
   const canvasW = 800;
   const canvasH = 400;
   canvas.width = canvasW * dpr;
   canvas.height = canvasH * dpr;
   canvas.style.width = '100%';
   canvas.style.height = 'auto';
-  ctx.scale(dpr, dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   function renderBars(epot, ekin, esp, ewarm) {
     const total = Math.max(epot + ekin + (esp || 0) + (ewarm || 0), 1);
@@ -2848,29 +2872,43 @@ function initSimulation(type) {
   function drawText(text, x, y, size, color) { ctx.fillStyle = color||'#e8edf5'; ctx.font = `${size||13}px Nunito`; ctx.fillText(text, x, y); }
   function drawDash(x1,y1,x2,y2,c) { ctx.setLineDash([4,4]); ctx.strokeStyle=c||'rgba(78,205,196,0.25)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.setLineDash([]); }
 
+  // Universal sim state
+  let simPaused = false;
+  let simNeedsReset = false;
+
+  function simControlButtons(extraBefore) {
+    return `
+      ${extraBefore || ''}
+      <button class="btn btn-primary btn-small" onclick="document.getElementById('simCanvas').dataset.simStart='1'">▶ Starten</button>
+      <button class="btn btn-secondary btn-small" onclick="document.getElementById('simCanvas').dataset.simReset='1'">🔄 Zurücksetzen</button>
+      <button class="btn btn-secondary btn-small" id="simPauseBtn" onclick="this.dataset.sp=this.dataset.sp==='1'?'0':'1';this.textContent=this.dataset.sp==='1'?'⏸ Pause':'▶ Weiter'" data-sp="0">▶ Weiter</button>
+    `;
+  }
+  function checkSimControls() {
+    if (canvas.dataset.simReset === '1') { simNeedsReset = true; simPaused = false; canvas.dataset.simReset = '0'; const pb=document.getElementById('simPauseBtn'); if(pb) pb.dataset.sp='0'; }
+    if (canvas.dataset.simStart === '1') { simPaused = false; canvas.dataset.simStart = '0'; const pb=document.getElementById('simPauseBtn'); if(pb){pb.dataset.sp='1';pb.textContent='⏸ Pause';} }
+    simPaused = document.getElementById('simPauseBtn')?.dataset.sp === '0';
+  }
+
   // ===== PENDULUM (Level 0) =====
   if (type === 'pendulum') {
     let angle = Math.PI/3, angVel = 0;
-    const L = 160, g = 9.81, m = 2, px = 400, py = 50;
+    const L = 160, g = 9.81, px = 400, py = 50;
     let trail = [];
-    controls.innerHTML = `
+    controls.innerHTML = simControlButtons(`
       <div class="slider-group"><label>Startwinkel: <span id="sA">60</span>°</label>
-      <input type="range" min="10" max="85" value="60" id="slAngle"></div>
+      <input type="range" min="10" max="85" value="60" id="slAngle" oninput="document.getElementById('sA').textContent=this.value"></div>
       <div class="slider-group"><label>Masse: <span id="sM">2</span> kg</label>
-      <input type="range" min="1" max="10" value="2" id="slMass"></div>
-      <button class="btn btn-secondary btn-small" id="pendReset" onclick="document.getElementById('simCanvas').dataset.reset='1'">🔄 Reset</button>
-      <button class="btn btn-secondary btn-small" id="pendPause" data-p="1" onclick="this.dataset.p=this.dataset.p==='1'?'0':'1';this.textContent=this.dataset.p==='1'?'⏸ Pause':'▶ Play'">⏸ Pause</button>
-    `;
+      <input type="range" min="1" max="10" value="2" id="slMass" oninput="document.getElementById('sM').textContent=this.value"></div>
+    `);
     function loop() {
-      if (canvas.dataset.reset === '1') {
-        angle = parseInt(document.getElementById('slAngle').value) * Math.PI/180;
-        angVel = 0; trail = []; canvas.dataset.reset = '0';
+      checkSimControls();
+      if (simNeedsReset) {
+        angle = parseInt(document.getElementById('slAngle')?.value||60) * Math.PI/180;
+        angVel = 0; trail = []; simNeedsReset = false;
       }
-      const paused = document.getElementById('pendPause')?.dataset.p === '0';
       const mass = parseInt(document.getElementById('sM')?.textContent || 2);
-      document.getElementById('sA').textContent = document.getElementById('slAngle').value;
-      document.getElementById('sM').textContent = document.getElementById('slMass').value;
-      if (!paused) {
+      if (!simPaused) {
         const acc = -(g / (L/100)) * Math.sin(angle);
         angVel += acc * 0.016; angVel *= 0.9995; angle += angVel * 0.016;
       }
@@ -2915,30 +2953,30 @@ function initSimulation(type) {
       ctx.fillStyle='rgba(15,23,41,0.8)'; ctx.fillRect(10,360,250,35); ctx.strokeStyle='var(--border)'; ctx.strokeRect(10,360,250,35);
       drawText(`v = ${v.toFixed(2)} m/s  |  h = ${h.toFixed(2)} m`, 18, 382, 12);
       renderBars(ep, ek);
-      animId = requestAnimationFrame(loop);
+      currentAnimId = requestAnimationFrame(loop);
     }
     loop();
 
   // ===== ELEVATOR (Level 1) =====
   } else if (type === 'elevator') {
     let cabY = 320, targetY = 320, cabV = 0;
-    controls.innerHTML = `
+    controls.innerHTML = simControlButtons(`
       <div class="slider-group"><label>Masse: <span id="eM">70</span> kg</label>
       <input type="range" min="20" max="200" value="70" oninput="document.getElementById('eM').textContent=this.value"></div>
       <div class="slider-group"><label>Zieletage: <span id="eF">1</span></label>
       <input type="range" min="1" max="10" value="1" id="slFloor" oninput="document.getElementById('eF').textContent=this.value"></div>
-      <button class="btn btn-secondary btn-small" onclick="document.getElementById('simCanvas').dataset.go='1'">🛗 Fahren!</button>
-    `;
+    `);
     function loop() {
+      checkSimControls();
+      if (simNeedsReset) { cabY=320; targetY=320; cabV=0; simNeedsReset=false; }
       const m = parseInt(document.getElementById('eM')?.textContent||70);
       const floor = parseInt(document.getElementById('eF')?.textContent||1);
-      const h = floor * 3; // 3m per floor
+      const h = floor * 3;
       targetY = 340 - (floor-1) * 30;
-      if (canvas.dataset.go === '1') { canvas.dataset.go = '2'; }
-      if (canvas.dataset.go === '2') {
+      if (!simPaused) {
         const diff = targetY - cabY;
         if (Math.abs(diff) > 1) { cabV = diff * 0.03; cabY += cabV; } 
-        else { cabY = targetY; cabV = 0; canvas.dataset.go = '0'; }
+        else { cabY = targetY; cabV = 0; }
       }
       const currentFloor = Math.round((340 - cabY) / 30) + 1;
       const currentH = (currentFloor - 1) * 3;
@@ -2973,76 +3011,96 @@ function initSimulation(type) {
       drawText(`E_pot = ${ep.toLocaleString()} J`, 520, 162, 13, '#ffd93d');
       drawGround(370);
       renderBars(ep, ek);
-      animId = requestAnimationFrame(loop);
+      currentAnimId = requestAnimationFrame(loop);
     }
     loop();
 
   // ===== HALFPIPE (Level 2) =====
   } else if (type === 'halfpipe') {
-    let ballAngle = Math.PI*0.4, ballVel = 0;
-    const R = 140, cx = 400, cy = 200;
+    // Ball rolls inside a U-shaped halfpipe. Angle 0 = left rim, PI = right rim, PI/2 = bottom
+    let angle = 0.3, angVel = 0; // start near left rim
+    const R = 150, cx = 400, cy = 180;
     let trail = [];
-    controls.innerHTML = `
-      <div class="slider-group"><label>Starthöhe: <span id="hpH">80</span>%</label>
-      <input type="range" min="20" max="95" value="80" id="slHP"></div>
+    controls.innerHTML = simControlButtons(`
+      <div class="slider-group"><label>Starthöhe: <span id="hpH">85</span>%</label>
+      <input type="range" min="20" max="95" value="85" id="slHP" oninput="document.getElementById('hpH').textContent=this.value"></div>
       <div class="slider-group"><label>Reibung: <span id="hpF">1</span>%</label>
-      <input type="range" min="0" max="10" value="1" id="slFric"></div>
-      <button class="btn btn-secondary btn-small" onclick="document.getElementById('simCanvas').dataset.reset='1'">🔄 Reset</button>
-    `;
+      <input type="range" min="0" max="15" value="1" id="slFric" oninput="document.getElementById('hpF').textContent=this.value"></div>
+      <div class="slider-group"><label>Masse: <span id="hpM">5</span> kg</label>
+      <input type="range" min="1" max="20" value="5" id="slHPM" oninput="document.getElementById('hpM').textContent=this.value"></div>
+    `);
     function loop() {
-      if (canvas.dataset.reset === '1') {
-        const startPct = parseInt(document.getElementById('slHP')?.value||80)/100;
-        ballAngle = Math.PI * startPct; ballVel = 0; trail = []; canvas.dataset.reset='0';
+      checkSimControls();
+      if (simNeedsReset) {
+        const startPct = parseInt(document.getElementById('slHP')?.value||85)/100;
+        angle = (1-startPct) * Math.PI; // high % = near rim = small angle
+        angVel = 0; trail = []; simNeedsReset = false;
       }
-      const friction = parseInt(document.getElementById('hpF')?.textContent||1)/100;
-      document.getElementById('hpH').textContent = document.getElementById('slHP').value;
-      document.getElementById('hpF').textContent = document.getElementById('slFric').value;
-      // Physics
-      const grav = 10;
-      const acc = -grav/(R/100) * Math.cos(ballAngle);
-      ballVel += acc * 0.016;
-      ballVel *= (1 - friction * 0.01);
-      ballAngle += ballVel * 0.016;
-      // Clamp to halfpipe
-      if (ballAngle < 0.05) { ballAngle = 0.05; ballVel = Math.abs(ballVel)*0.8; }
-      if (ballAngle > Math.PI-0.05) { ballAngle = Math.PI-0.05; ballVel = -Math.abs(ballVel)*0.8; }
-      const bx = cx + R * Math.cos(ballAngle);
-      const by = cy + R * Math.sin(ballAngle);
-      const h = (R + R * Math.sin(ballAngle) - R) / 100 * 2;
-      const maxH = R*2/100*2;
-      const v = Math.abs(ballVel) * R / 100;
-      const m = 5;
-      const ep = m*10*Math.max(0, (cy+R-by)/100*3);
-      const ek = 0.5*m*v*v;
-      trail.push({x:bx,y:by}); if(trail.length>60) trail.shift();
+      const friction = parseInt(document.getElementById('hpF')?.textContent||1)/1000;
+      const m = parseInt(document.getElementById('hpM')?.textContent||5);
+      if (!simPaused) {
+        // Gravity component along the arc: g * cos(angle) pulls toward bottom (PI/2)
+        const grav = 9.81;
+        const acc = (grav / (R/100)) * Math.cos(angle); // positive = toward PI
+        angVel += acc * 0.016;
+        angVel *= (1 - friction); // damping
+        angle += angVel * 0.016;
+        // Bounce off rims
+        if (angle < 0.02) { angle = 0.02; angVel = Math.abs(angVel) * 0.95; }
+        if (angle > Math.PI - 0.02) { angle = Math.PI - 0.02; angVel = -Math.abs(angVel) * 0.95; }
+      }
+      // Ball position on the arc (0=left, PI=right, PI/2=bottom)
+      const bx = cx - R * Math.cos(angle); // left=cx-R, right=cx+R
+      const by = cy + R * Math.sin(angle); // bottom=cy+R
+      const bottomY = cy + R;
+      const h = Math.max(0, (bottomY - by) / 100 * 4); // scale to meters
+      const v = Math.abs(angVel) * R / 100;
+      const ep = m * 10 * h;
+      const ek = 0.5 * m * v * v;
+      trail.push({x:bx, y:by}); if (trail.length > 80) trail.shift();
       cl();
-      // Halfpipe shape
-      ctx.strokeStyle='#3a5a7a'; ctx.lineWidth=6;
-      ctx.beginPath(); ctx.arc(cx, cy, R+3, 0, Math.PI, false); ctx.stroke();
+      // Halfpipe U-shape (bottom half of circle)
+      ctx.strokeStyle='#2a4a5a'; ctx.lineWidth=8;
+      ctx.beginPath(); ctx.arc(cx, cy, R+4, 0, Math.PI, false); ctx.stroke();
       ctx.strokeStyle='#4ecdc4'; ctx.lineWidth=3;
       ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI, false); ctx.stroke();
-      // Ramp sides
+      // Side walls extending up
       ctx.fillStyle='#1a2f3d';
-      ctx.fillRect(cx-R-10, cy-R*0.6, 15, R*0.6+R);
-      ctx.fillRect(cx+R-5, cy-R*0.6, 15, R*0.6+R);
+      ctx.fillRect(cx-R-8, cy-80, 12, 80+R);
+      ctx.fillRect(cx+R-4, cy-80, 12, 80+R);
+      // Reference line at bottom
+      drawDash(cx-R-30, bottomY, cx+R+30, bottomY, 'rgba(78,205,196,0.15)');
       // Trail
-      trail.forEach((p,i)=>{ ctx.fillStyle=`rgba(255,107,107,${i/trail.length*0.4})`; ctx.beginPath(); ctx.arc(p.x,p.y,2,0,Math.PI*2); ctx.fill(); });
+      trail.forEach((p,i) => {
+        ctx.fillStyle = `rgba(255,107,107,${i/trail.length*0.35})`;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI*2); ctx.fill();
+      });
+      // Height indicator
+      if (h > 0.1) {
+        ctx.strokeStyle='rgba(255,217,61,0.5)'; ctx.lineWidth=1.5;
+        ctx.beginPath(); ctx.moveTo(bx, by+14); ctx.lineTo(bx, bottomY); ctx.stroke();
+        drawText(`h=${h.toFixed(2)}m`, bx+18, (by+bottomY)/2, 11, '#ffd93d');
+      }
+      // Velocity arrow (tangent to circle)
+      if (v > 0.3) {
+        const tangentX = Math.sin(angle) * angVel * 12;
+        const tangentY = Math.cos(angle) * angVel * 12;
+        ctx.strokeStyle='#ffd93d'; ctx.lineWidth=2.5;
+        ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx+tangentX, by+tangentY); ctx.stroke();
+      }
       // Skater ball
       drawBall(bx, by, 14, '#ff6b6b');
-      // Height ref
-      drawDash(cx-R-30, cy+R, cx+R+30, cy+R, 'rgba(78,205,196,0.2)');
-      if (by < cy+R-5) {
-        ctx.strokeStyle='rgba(255,217,61,0.5)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(bx,by+14); ctx.lineTo(bx,cy+R); ctx.stroke();
-      }
-      // Info
-      ctx.fillStyle='rgba(15,23,41,0.85)'; ctx.fillRect(10,10,200,55); ctx.strokeStyle='var(--border)'; ctx.strokeRect(10,10,200,55);
-      drawText(`v = ${v.toFixed(1)} m/s`, 18, 30, 13);
-      drawText(`h = ${Math.max(0,(cy+R-by)/100*3).toFixed(2)} m`, 18, 50, 13);
-      drawGround(cy+R+5);
+      drawText(`${m}kg`, bx-10, by+4, 9, '#fff');
+      // Ground
+      drawGround(bottomY + 8);
+      // Info box
+      ctx.fillStyle='rgba(15,23,41,0.85)'; ctx.fillRect(10,10,220,55); ctx.strokeStyle='var(--border)'; ctx.strokeRect(10,10,220,55);
+      drawText(`v = ${v.toFixed(1)} m/s  |  h = ${h.toFixed(2)} m`, 18, 30, 12);
+      drawText(`E_pot = ${Math.round(ep)} J  |  E_kin = ${Math.round(ek)} J`, 18, 50, 12);
       renderBars(ep, ek);
-      animId = requestAnimationFrame(loop);
+      currentAnimId = requestAnimationFrame(loop);
     }
-    canvas.dataset.reset='1';
+    simNeedsReset = true;
     loop();
 
   // ===== COASTER (Level 3) =====
@@ -3061,19 +3119,19 @@ function initSimulation(type) {
       }
       return 350;
     }
-    controls.innerHTML = `
+    controls.innerHTML = simControlButtons(`
       <div class="slider-group"><label>Starthöhe: <span id="cH">90</span>%</label>
       <input type="range" min="30" max="100" value="90" id="slCH" oninput="document.getElementById('cH').textContent=this.value"></div>
       <div class="slider-group"><label>Geschwindigkeit: <span id="cS">1.0</span>x</label>
       <input type="range" min="5" max="30" value="10" id="slCS" oninput="document.getElementById('cS').textContent=(this.value/10).toFixed(1)"></div>
-      <button class="btn btn-secondary btn-small" onclick="document.getElementById('simCanvas').dataset.cr='1'">🔄 Reset</button>
-    `;
+    `);
     function loop() {
-      if (canvas.dataset.cr === '1') { t=0; canvas.dataset.cr='0'; }
+      checkSimControls();
+      if (simNeedsReset) { t=0; simNeedsReset=false; }
       const startH = parseInt(document.getElementById('cH')?.textContent||90);
       speed = parseFloat(document.getElementById('cS')?.textContent||1);
       hills[1].h = 350 - startH*3;
-      t += speed * 0.8;
+      if (!simPaused) t += speed * 0.8;
       const px = t % 800;
       const py = getTrackY(px);
       const h = (350-py)/350*40;
@@ -3102,7 +3160,7 @@ function initSimulation(type) {
       drawText(`h = ${h.toFixed(1)} m  |  v = ${v.toFixed(1)} m/s`, 18, 30, 12);
       drawText(`E_ges = ${Math.round(totalE).toLocaleString()} J`, 18, 50, 12, '#a29bfe');
       renderBars(ep, ek);
-      animId = requestAnimationFrame(loop);
+      currentAnimId = requestAnimationFrame(loop);
     }
     loop();
 
@@ -3110,19 +3168,18 @@ function initSimulation(type) {
   } else if (type === 'freefall') {
     let objY = 60, objV = 0, dropping = false, landed = false;
     let ghostTrail = [];
-    controls.innerHTML = `
+    controls.innerHTML = simControlButtons(`
       <div class="slider-group"><label>Masse: <span id="ffM">2</span> kg</label>
       <input type="range" min="1" max="20" value="2" oninput="document.getElementById('ffM').textContent=this.value"></div>
       <div class="slider-group"><label>Höhe: <span id="ffH">30</span> m</label>
       <input type="range" min="5" max="80" value="30" oninput="document.getElementById('ffH').textContent=this.value"></div>
-      <button class="btn btn-primary btn-small" onclick="document.getElementById('simCanvas').dataset.drop='1'">🍎 Fallen lassen!</button>
-      <button class="btn btn-secondary btn-small" onclick="document.getElementById('simCanvas').dataset.drop='0';document.getElementById('simCanvas').dataset.rst='1'">🔄</button>
-    `;
+    `);
     function loop() {
+      checkSimControls();
       const m = parseFloat(document.getElementById('ffM')?.textContent||2);
       const H = parseFloat(document.getElementById('ffH')?.textContent||30);
-      if (canvas.dataset.rst==='1') { objY=60; objV=0; dropping=false; landed=false; ghostTrail=[]; canvas.dataset.rst='0'; canvas.dataset.drop='0'; }
-      if (canvas.dataset.drop==='1'&&!dropping&&!landed) { dropping=true; objY=60; objV=0; ghostTrail=[]; }
+      if (simNeedsReset) { objY=60; objV=0; dropping=false; landed=false; ghostTrail=[]; simNeedsReset=false; }
+      if (!simPaused && !dropping && !landed) { dropping=true; objY=60; objV=0; ghostTrail=[]; }
       if (dropping) {
         objV += 10*0.016*3; objY += objV*2;
         ghostTrail.push({y:objY,v:objV});
@@ -3169,31 +3226,29 @@ function initSimulation(type) {
       drawText(`h = ${curH.toFixed(1)} m`, 510, 97, 12);
       drawText(`v = ${curV.toFixed(1)} m/s`, 510, 114, 12);
       renderBars(ep, ek);
-      animId = requestAnimationFrame(loop);
+      currentAnimId = requestAnimationFrame(loop);
     }
     loop();
 
   // ===== SPRING (Level 5) =====
   } else if (type === 'spring') {
     let springX = 250, springV = 0, shooting = false, ballX = 0, ballY = 200, ballVx = 0, ballVy = 0, ballFlying = false;
-    controls.innerHTML = `
+    controls.innerHTML = simControlButtons(`
       <div class="slider-group"><label>Federkonstante D: <span id="spD">400</span> N/m</label>
       <input type="range" min="100" max="1500" value="400" oninput="document.getElementById('spD').textContent=this.value"></div>
       <div class="slider-group"><label>Auslenkung: <span id="spS">15</span> cm</label>
       <input type="range" min="2" max="40" value="15" oninput="document.getElementById('spS').textContent=this.value"></div>
       <div class="slider-group"><label>Masse: <span id="spM">0.5</span> kg</label>
       <input type="range" min="1" max="50" value="5" oninput="document.getElementById('spM').textContent=(this.value/10).toFixed(1)"></div>
-      <button class="btn btn-primary btn-small" onclick="document.getElementById('simCanvas').dataset.shoot='1'">🚀 Abschießen!</button>
-      <button class="btn btn-secondary btn-small" onclick="document.getElementById('simCanvas').dataset.shoot='0';document.getElementById('simCanvas').dataset.srst='1'">🔄</button>
-    `;
+    `);
     function loop() {
+      checkSimControls();
       const D = parseFloat(document.getElementById('spD')?.textContent||400);
       const s = parseFloat(document.getElementById('spS')?.textContent||15)/100;
       const m = parseFloat(document.getElementById('spM')?.textContent||0.5);
-      if (canvas.dataset.srst==='1') { shooting=false; ballFlying=false; springX=250-s*600; ballX=0; ballY=200; ballVx=0; ballVy=0; canvas.dataset.srst='0'; }
-      if (canvas.dataset.shoot==='1'&&!shooting&&!ballFlying) {
+      if (simNeedsReset) { shooting=false; ballFlying=false; springX=250-s*600; ballX=0; ballY=200; ballVx=0; ballVy=0; simNeedsReset=false; }
+      if (!simPaused && !shooting && !ballFlying) {
         shooting=true; springX=250-s*600;
-        canvas.dataset.shoot='2';
       }
       const restX = 250;
       const compX = restX - s*600;
@@ -3255,7 +3310,7 @@ function initSimulation(type) {
       drawText(`v_max = √(D·s²/m) = ${v_launch.toFixed(1)} m/s`, 460, 48, 11);
       drawText(`Reichweite ≈ ${(v_launch*v_launch/10).toFixed(1)} m`, 460, 66, 11, '#ffd93d');
       renderBars(ep, ek, esp);
-      animId = requestAnimationFrame(loop);
+      currentAnimId = requestAnimationFrame(loop);
     }
     canvas.dataset.srst='1';
     loop();
@@ -3264,22 +3319,21 @@ function initSimulation(type) {
   } else if (type === 'bungee') {
     let jumperY = 50, jumperV = 0, jumping = false;
     let trail = [];
-    controls.innerHTML = `
+    controls.innerHTML = simControlButtons(`
       <div class="slider-group"><label>Masse: <span id="buM">75</span> kg</label>
       <input type="range" min="40" max="120" value="75" oninput="document.getElementById('buM').textContent=this.value"></div>
       <div class="slider-group"><label>Seil D: <span id="buD">100</span> N/m</label>
       <input type="range" min="30" max="300" value="100" oninput="document.getElementById('buD').textContent=this.value"></div>
       <div class="slider-group"><label>Seillänge: <span id="buL">15</span> m</label>
       <input type="range" min="5" max="25" value="15" oninput="document.getElementById('buL').textContent=this.value"></div>
-      <button class="btn btn-primary btn-small" onclick="document.getElementById('simCanvas').dataset.jump='1'">🧗 Springen!</button>
-      <button class="btn btn-secondary btn-small" onclick="document.getElementById('simCanvas').dataset.jump='0';document.getElementById('simCanvas').dataset.brst='1'">🔄</button>
-    `;
+    `);
     function loop() {
+      checkSimControls();
       const m = parseFloat(document.getElementById('buM')?.textContent||75);
       const D = parseFloat(document.getElementById('buD')?.textContent||100);
       const ropeL = parseFloat(document.getElementById('buL')?.textContent||15);
-      if (canvas.dataset.brst==='1') { jumperY=50; jumperV=0; jumping=false; trail=[]; canvas.dataset.brst='0'; }
-      if (canvas.dataset.jump==='1'&&!jumping) { jumping=true; jumperY=50; jumperV=0; trail=[]; canvas.dataset.jump='2'; }
+      if (simNeedsReset) { jumperY=50; jumperV=0; jumping=false; trail=[]; simNeedsReset=false; }
+      if (!simPaused && !jumping) { jumping=true; jumperY=50; jumperV=0; trail=[]; }
       const bridgeY = 40;
       const scale = 8; // pixels per meter
       if (jumping) {
@@ -3335,29 +3389,28 @@ function initSimulation(type) {
       drawText(`Dehnung: ${stretch.toFixed(1)} m`, 18, 66, 12, stretch>0?'#ff6b6b':'#5a6e96');
       drawText(dist>ropeL?'Seil gespannt!':'Freier Fall', 18, 82, 11, dist>ropeL?'#ff6b6b':'#ffd93d');
       renderBars(ep, ek, esp);
-      animId = requestAnimationFrame(loop);
+      currentAnimId = requestAnimationFrame(loop);
     }
     loop();
 
   // ===== BIKE / POWER (Level 7) =====
   } else if (type === 'bike') {
     let bikerX = 80, elapsed = 0, riding = false;
-    controls.innerHTML = `
+    controls.innerHTML = simControlButtons(`
       <div class="slider-group"><label>Masse: <span id="bkM">80</span> kg</label>
       <input type="range" min="40" max="120" value="80" oninput="document.getElementById('bkM').textContent=this.value"></div>
       <div class="slider-group"><label>Leistung: <span id="bkP">150</span> W</label>
       <input type="range" min="50" max="500" value="150" oninput="document.getElementById('bkP').textContent=this.value"></div>
       <div class="slider-group"><label>Berghöhe: <span id="bkH">30</span> m</label>
       <input type="range" min="10" max="80" value="30" oninput="document.getElementById('bkH').textContent=this.value"></div>
-      <button class="btn btn-primary btn-small" onclick="document.getElementById('simCanvas').dataset.ride='1'">🚲 Losfahren!</button>
-      <button class="btn btn-secondary btn-small" onclick="document.getElementById('simCanvas').dataset.ride='0';document.getElementById('simCanvas').dataset.bkr='1'">🔄</button>
-    `;
+    `);
     function loop() {
+      checkSimControls();
       const m = parseFloat(document.getElementById('bkM')?.textContent||80);
       const P = parseFloat(document.getElementById('bkP')?.textContent||150);
       const H = parseFloat(document.getElementById('bkH')?.textContent||30);
-      if (canvas.dataset.bkr==='1') { bikerX=80; elapsed=0; riding=false; canvas.dataset.bkr='0'; }
-      if (canvas.dataset.ride==='1'&&!riding) { riding=true; bikerX=80; elapsed=0; canvas.dataset.ride='2'; }
+      if (simNeedsReset) { bikerX=80; elapsed=0; riding=false; simNeedsReset=false; }
+      if (!simPaused && !riding) { riding=true; bikerX=80; elapsed=0; }
       const totalE = m*10*H;
       const totalTime = totalE/P;
       function hillY(x) { return 330 - H*3 * Math.pow(Math.max(0,Math.min(1,(x-80)/600)),0.7); }
@@ -3406,30 +3459,29 @@ function initSimulation(type) {
       drawText(`Vergangen: ${elapsed.toFixed(0)} s (${(elapsed/totalTime*100).toFixed(0)}%)`, 18, 86, 11, bikerX>=680?'#00b894':'#e8edf5');
       drawGround(370);
       renderBars(ep, ek);
-      animId = requestAnimationFrame(loop);
+      currentAnimId = requestAnimationFrame(loop);
     }
     loop();
 
   // ===== FRICTION (Level 8) =====
   } else if (type === 'friction') {
     let blockX = 100, blockV = 8, ewarm = 0, running = false;
-    controls.innerHTML = `
+    controls.innerHTML = simControlButtons(`
       <div class="slider-group"><label>Startgeschwindigkeit: <span id="frV">8</span> m/s</label>
       <input type="range" min="2" max="20" value="8" oninput="document.getElementById('frV').textContent=this.value"></div>
       <div class="slider-group"><label>Reibungskoeffizient: <span id="frMu">0.3</span></label>
       <input type="range" min="0" max="10" value="3" oninput="document.getElementById('frMu').textContent=(this.value/10).toFixed(1)"></div>
       <div class="slider-group"><label>Masse: <span id="frM">5</span> kg</label>
       <input type="range" min="1" max="20" value="5" oninput="document.getElementById('frM').textContent=this.value"></div>
-      <button class="btn btn-primary btn-small" onclick="document.getElementById('simCanvas').dataset.frgo='1'">▶ Starten!</button>
-      <button class="btn btn-secondary btn-small" onclick="document.getElementById('simCanvas').dataset.frgo='0';document.getElementById('simCanvas').dataset.frrst='1'">🔄</button>
-    `;
+    `);
     let heatParticles = [];
     function loop() {
+      checkSimControls();
       const v0 = parseFloat(document.getElementById('frV')?.textContent||8);
       const mu = parseFloat(document.getElementById('frMu')?.textContent||0.3);
       const m = parseFloat(document.getElementById('frM')?.textContent||5);
-      if (canvas.dataset.frrst==='1') { blockX=100; blockV=v0; ewarm=0; running=false; heatParticles=[]; canvas.dataset.frrst='0'; }
-      if (canvas.dataset.frgo==='1'&&!running) { running=true; blockV=v0; ewarm=0; blockX=100; heatParticles=[]; canvas.dataset.frgo='2'; }
+      if (simNeedsReset) { blockX=100; blockV=v0; ewarm=0; running=false; heatParticles=[]; simNeedsReset=false; }
+      if (!simPaused && !running) { running=true; blockV=v0; ewarm=0; blockX=100; heatParticles=[]; }
       const totalE = 0.5*m*v0*v0;
       if (running && blockV > 0.01) {
         const friction = mu * m * 10;
@@ -3488,7 +3540,7 @@ function initSimulation(type) {
       const eta = totalE>0 ? ((ek/totalE)*100).toFixed(0) : 0;
       drawText(`η = ${eta}%  |  Strecke = ${((blockX-100)/3).toFixed(1)} m`, 18, 68, 12, '#ffd93d');
       renderBars(0, ek, undefined, ewarm);
-      animId = requestAnimationFrame(loop);
+      currentAnimId = requestAnimationFrame(loop);
     }
     loop();
 
@@ -3497,14 +3549,11 @@ function initSimulation(type) {
     let t = 0;
     const stages = ['☀️ Sonne','🌿 Pflanze','🍎 Nahrung','💪 Muskel','🚴 Bewegung','⚡ Generator','💡 Licht'];
     let activeStage = 0;
-    controls.innerHTML = `
-      <button class="btn btn-secondary btn-small" id="chainPlay" data-p="1" onclick="this.dataset.p=this.dataset.p==='1'?'0':'1';this.textContent=this.dataset.p==='1'?'⏸ Pause':'▶ Play'">⏸ Pause</button>
-      <button class="btn btn-secondary btn-small" onclick="document.getElementById('simCanvas').dataset.ct='0'">🔄 Reset</button>
-    `;
+    controls.innerHTML = simControlButtons();
     function loop() {
-      if (canvas.dataset.ct==='0') { t=0; activeStage=0; canvas.dataset.ct=''; }
-      const paused = document.getElementById('chainPlay')?.dataset.p==='0';
-      if (!paused) { t+=0.02; activeStage = Math.floor(t*0.7) % stages.length; }
+      checkSimControls();
+      if (simNeedsReset) { t=0; activeStage=0; simNeedsReset=false; }
+      if (!simPaused) { t+=0.02; activeStage = Math.floor(t*0.7) % stages.length; }
       cl();
       const stageW = 800/stages.length;
       stages.forEach((s,i) => {
@@ -3561,18 +3610,21 @@ function initSimulation(type) {
       });
       drawText('Wirkungsgrad je Stufe:', 10, 345, 10, '#8a9bc0');
       renderBars(50-activeStage*5, activeStage*7, undefined, activeStage*3);
-      animId = requestAnimationFrame(loop);
+      currentAnimId = requestAnimationFrame(loop);
     }
     loop();
   }
-  canvas.dataset.animId = animId;
 }
+
+// Global animation frame tracker
+let currentAnimId = null;
 
 function endSimulation() {
   // Stop animation
-  cancelAnimationFrame(parseInt(document.getElementById('simCanvas')?.dataset.animId) || 0);
-  // Show self-assessment after
-  showSelfAssessment('after', currentLevelData.id);
+  if (currentAnimId) cancelAnimationFrame(currentAnimId);
+  currentAnimId = null;
+  // NEW FLOW: After simulation → go to tasks
+  renderTask();
 }
 
 // ============================================================
@@ -3946,64 +3998,202 @@ function exportPDF() {
   const doc = new jsPDF();
   let y = 20;
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.text('EnergieLab – Fortschrittsbericht', 20, y);
-  y += 10;
+  // Helper
+  function checkPage(needed) { if (y > 280 - (needed||0)) { doc.addPage(); y = 20; } }
+  function heading(text, size) { checkPage(15); doc.setFont('helvetica','bold'); doc.setFontSize(size||14); doc.text(text,20,y); y+=size?size*0.6:9; }
+  function line(text, indent) { checkPage(6); doc.setFont('helvetica','normal'); doc.setFontSize(10); const lines=doc.splitTextToSize(text,170-(indent||0)); doc.text(lines,(indent||0)+20,y); y+=lines.length*4.5+1; }
+  function colorLine(text,color,bold) { checkPage(6); doc.setFont('helvetica',bold?'bold':'normal'); doc.setFontSize(10); doc.setTextColor(...color); const lines=doc.splitTextToSize(text,170); doc.text(lines,20,y); y+=lines.length*4.5+1; doc.setTextColor(0,0,0); }
+  function separator() { checkPage(8); doc.setDrawColor(200,200,200); doc.line(20,y,190,y); y+=5; }
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
+  // HEADER
+  doc.setFont('helvetica','bold'); doc.setFontSize(22);
+  doc.text('EnergieLab', 20, y); y += 6;
+  doc.setFontSize(12); doc.setFont('helvetica','normal');
+  doc.text('Fortschrittsbericht & Lerndiagnose', 20, y); y += 10;
+
   const name = S.name || 'Anonym';
-  doc.text(`Name: ${name}`, 20, y); y += 6;
-  doc.text(`Datum: ${new Date().toLocaleDateString('de-DE')}`, 20, y); y += 6;
-  doc.text(`XP: ${S.xp}`, 20, y); y += 6;
-  const completed = Object.values(S.levels).filter(l => l.completed).length;
-  doc.text(`Level abgeschlossen: ${completed}/11`, 20, y); y += 6;
-  doc.text(`Badges: ${S.badges.length}/${BADGE_DEFS.length}`, 20, y); y += 10;
+  line(`Schüler/in: ${name}`);
+  line(`Datum: ${new Date().toLocaleDateString('de-DE', {day:'2-digit',month:'long',year:'numeric'})}`);
+  line(`Gesamte XP: ${S.xp}`);
+  const completed = Object.values(S.levels).filter(l=>l.completed).length;
+  line(`Level abgeschlossen: ${completed}/11 (${Math.round(completed/11*100)}%)`);
+  line(`Badges: ${S.badges.length}/${BADGE_DEFS.length}`);
+  separator();
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('Level-Ergebnisse', 20, y); y += 8;
-
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
+  // OVERVIEW TABLE
+  heading('Übersicht aller Level');
   LEVELS.forEach(l => {
-    if (y > 270) { doc.addPage(); y = 20; }
     const ls = S.levels[l.id];
-    const status = ls.completed ? `✅ ${ls.score}%` : (ls.unlocked ? '🔓 Offen' : '🔒');
-    doc.text(`Level ${l.id}: ${l.title} – ${status}`, 20, y);
-    y += 5;
+    const status = ls.completed ? `${ls.score}%` : (ls.unlocked ? 'Offen' : 'Gesperrt');
+    const icon = ls.completed ? (ls.score >= 80 ? '✓' : '△') : '○';
+    line(`${icon} Level ${l.id}: ${l.title} — ${status}`);
+  });
+  separator();
+
+  // PER-LEVEL DIAGNOSIS
+  heading('Detaillierte Lerndiagnose pro Thema', 16);
+  y += 3;
+
+  LEVELS.forEach(l => {
+    const ls = S.levels[l.id];
+    const levelAnswers = S.answers.filter(a => a.level === l.id);
+    if (levelAnswers.length === 0) return; // Skip levels not attempted
+
+    checkPage(40);
+    heading(`Level ${l.id}: ${l.title}`, 13);
+
+    const correctCount = levelAnswers.filter(a => a.correct).length;
+    const totalCount = levelAnswers.length;
+    const pct = totalCount > 0 ? Math.round(correctCount/totalCount*100) : 0;
+
+    if (pct >= 80) {
+      colorLine(`Ergebnis: ${correctCount}/${totalCount} richtig (${pct}%) — Sehr gut!`, [0,150,100], true);
+    } else if (pct >= 60) {
+      colorLine(`Ergebnis: ${correctCount}/${totalCount} richtig (${pct}%) — Teilweise verstanden`, [200,150,0], true);
+    } else {
+      colorLine(`Ergebnis: ${correctCount}/${totalCount} richtig (${pct}%) — Übungsbedarf`, [200,50,50], true);
+    }
+
+    // Find wrong answers for this level
+    const wrongAnswers = levelAnswers.filter(a => !a.correct);
+    if (wrongAnswers.length > 0) {
+      y += 2;
+      doc.setFont('helvetica','bold'); doc.setFontSize(10);
+      doc.setTextColor(200,50,50);
+      doc.text('Problembereiche:', 20, y); y += 5;
+      doc.setTextColor(0,0,0);
+
+      wrongAnswers.forEach(wa => {
+        checkPage(20);
+        // Question
+        doc.setFont('helvetica','bold'); doc.setFontSize(9);
+        const qLines = doc.splitTextToSize(`✗ ${wa.question || 'Aufgabe ' + (wa.task+1)}`, 165);
+        doc.text(qLines, 25, y); y += qLines.length * 4 + 1;
+
+        // Explanation what they need to practice
+        if (wa.explain) {
+          doc.setFont('helvetica','normal'); doc.setFontSize(8);
+          doc.setTextColor(100,100,100);
+          const eLines = doc.splitTextToSize(`→ ${wa.explain}`, 160);
+          doc.text(eLines, 28, y); y += eLines.length * 3.5 + 2;
+          doc.setTextColor(0,0,0);
+        }
+      });
+    }
+
+    // Correct answers summary
+    const rightAnswers = levelAnswers.filter(a => a.correct);
+    if (rightAnswers.length > 0) {
+      y += 1;
+      doc.setFont('helvetica','normal'); doc.setFontSize(9);
+      doc.setTextColor(0,130,90);
+      doc.text(`✓ ${rightAnswers.length} Aufgabe${rightAnswers.length>1?'n':''} korrekt beantwortet`, 25, y); y += 5;
+      doc.setTextColor(0,0,0);
+    }
+
+    // Recommendation
+    if (pct < 80 && wrongAnswers.length > 0) {
+      checkPage(12);
+      doc.setFont('helvetica','italic'); doc.setFontSize(9);
+      doc.setTextColor(50,80,150);
+      const concepts = [...new Set(wrongAnswers.map(wa => {
+        // Extract key concept from the question
+        const q = (wa.question||'').toLowerCase();
+        if (q.includes('lageenergie') || q.includes('höhe') || q.includes('e_pot') || q.includes('m · g · h')) return 'Lageenergie (E=m·g·h)';
+        if (q.includes('kinetisch') || q.includes('geschwindigkeit') || q.includes('v²') || q.includes('e_kin')) return 'Kinetische Energie (E=½mv²)';
+        if (q.includes('spannenergie') || q.includes('feder') || q.includes('d · s')) return 'Spannenergie (E=½Ds²)';
+        if (q.includes('leistung') || q.includes('watt') || q.includes('p =')) return 'Leistung (P=E/t)';
+        if (q.includes('reibung') || q.includes('wirkungsgrad') || q.includes('verlust')) return 'Reibung & Wirkungsgrad';
+        if (q.includes('erhaltung') || q.includes('umwandlung') || q.includes('gesamt')) return 'Energieerhaltung';
+        if (q.includes('einheit') || q.includes('joule') || q.includes('formel')) return 'Grundlagen & Formeln';
+        return 'Allgemeines Verständnis';
+      }))];
+      const recLines = doc.splitTextToSize(`Empfehlung: Folgende Konzepte wiederholen: ${concepts.join(', ')}`, 165);
+      doc.text(recLines, 25, y); y += recLines.length * 4 + 2;
+      doc.setTextColor(0,0,0);
+    }
+
+    separator();
   });
 
-  y += 5;
+  // GLOBAL DIAGNOSIS SUMMARY
+  checkPage(50);
+  heading('Gesamtdiagnose', 16);
+  
+  const allWrong = S.answers.filter(a => !a.correct);
+  const allCorrect = S.answers.filter(a => a.correct);
+  const totalPct = S.answers.length > 0 ? Math.round(allCorrect.length/S.answers.length*100) : 0;
+
+  line(`Insgesamt ${S.answers.length} Aufgaben bearbeitet: ${allCorrect.length} richtig, ${allWrong.length} falsch (${totalPct}%)`);
+  y += 3;
+
+  if (allWrong.length > 0) {
+    heading('Konzepte mit Übungsbedarf:', 11);
+    // Categorize all wrong answers
+    const problemMap = {};
+    allWrong.forEach(wa => {
+      const q = (wa.question||'').toLowerCase();
+      let cat = 'Sonstiges';
+      if (q.includes('lageenergie') || q.includes('höhe') || q.includes('e_pot') || q.includes('m · g · h') || q.includes('heben') || q.includes('aufzug')) cat = 'Lageenergie';
+      else if (q.includes('kinetisch') || q.includes('geschwindigkeit') || q.includes('v²') || q.includes('e_kin') || q.includes('beweg') || q.includes('fall')) cat = 'Kinetische Energie';
+      else if (q.includes('spannenergie') || q.includes('feder') || q.includes('trampolin') || q.includes('d · s') || q.includes('elastisch')) cat = 'Spannenergie';
+      else if (q.includes('leistung') || q.includes('watt') || q.includes('p =') || q.includes('motor')) cat = 'Leistung';
+      else if (q.includes('reibung') || q.includes('wirkungsgrad') || q.includes('verlust') || q.includes('wärme') || q.includes('bremse')) cat = 'Reibung & Wirkungsgrad';
+      else if (q.includes('erhaltung') || q.includes('umwandlung') || q.includes('gesamt') || q.includes('perpetuum')) cat = 'Energieerhaltung & Umwandlung';
+      else if (q.includes('einheit') || q.includes('joule') || q.includes('formel') || q.includes('beschreibt')) cat = 'Grundlagen & Formeln';
+      if (!problemMap[cat]) problemMap[cat] = 0;
+      problemMap[cat]++;
+    });
+
+    const sorted = Object.entries(problemMap).sort((a,b) => b[1]-a[1]);
+    sorted.forEach(([cat, count]) => {
+      const bar = '■'.repeat(Math.min(count, 15));
+      colorLine(`${cat}: ${count} Fehler ${bar}`, count >= 3 ? [200,50,50] : [200,150,0]);
+    });
+
+    y += 3;
+    heading('Empfehlungen:', 11);
+    sorted.forEach(([cat, count]) => {
+      checkPage(8);
+      if (cat === 'Lageenergie') line('→ Formel E=m·g·h üben. Zusammenhang Masse, Höhe und Energie verstehen.', 5);
+      else if (cat === 'Kinetische Energie') line('→ Formel E=½mv² üben. Besonders: v wird quadriert! Doppelte Geschwindigkeit = 4x Energie.', 5);
+      else if (cat === 'Spannenergie') line('→ Formel E=½Ds² üben. Federkonstante und Auslenkung verstehen.', 5);
+      else if (cat === 'Leistung') line('→ P=E/t üben. Unterschied Energie vs. Leistung. Zeitumrechnung (min→s) beachten.', 5);
+      else if (cat === 'Reibung & Wirkungsgrad') line('→ Konzept Wirkungsgrad (η=E_nutz/E_zugeführt) üben. Reibung = Umwandlung in Wärme.', 5);
+      else if (cat === 'Energieerhaltung & Umwandlung') line('→ Energieerhaltungssatz wiederholen. Energie kann nur umgewandelt werden!', 5);
+      else if (cat === 'Grundlagen & Formeln') line('→ Einheiten (Joule, Watt) und Grundformeln wiederholen.', 5);
+      else line(`→ Konzept "${cat}" gezielt wiederholen.`, 5);
+    });
+  } else if (S.answers.length > 0) {
+    colorLine('Keine Problembereiche erkannt – hervorragende Leistung!', [0,150,100], true);
+  }
+
+  separator();
+
+  // JOURNAL
   if (S.journal.length > 0) {
-    if (y > 250) { doc.addPage(); y = 20; }
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text('Lerntagebuch', 20, y); y += 8;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
+    checkPage(20);
+    heading('Lerntagebuch');
+    doc.setFontSize(9); doc.setFont('helvetica','normal');
     S.journal.forEach(e => {
-      if (y > 270) { doc.addPage(); y = 20; }
+      checkPage(12);
       const date = new Date(e.date).toLocaleDateString('de-DE');
       const lines = doc.splitTextToSize(`${date}: ${e.text}`, 170);
       doc.text(lines, 20, y);
       y += lines.length * 4 + 3;
     });
+    separator();
   }
 
-  y += 5;
-  if (y > 260) { doc.addPage(); y = 20; }
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Wiederherstellungs-Passwort', 20, y); y += 6;
-  doc.setFont('courier', 'normal');
-  doc.setFontSize(6);
+  // PASSWORD
+  checkPage(20);
+  heading('Wiederherstellungs-Passwort', 10);
+  doc.setFont('courier','normal'); doc.setFontSize(5);
   const pw = stateToPassword();
   const pwLines = doc.splitTextToSize(pw, 170);
-  doc.text(pwLines.slice(0, 10), 20, y);
+  doc.text(pwLines.slice(0, 8), 20, y);
 
-  doc.save('EnergieLab_Fortschritt.pdf');
+  doc.save(`EnergieLab_${name.replace(/\s/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`);
   showNotification('📄 PDF wurde erstellt!', '');
 }
 
@@ -4076,12 +4266,14 @@ function updateTeacherPanel() {
       <p class="text-xs text-muted">Aktuell: Level ${currentLevelData.id} – ${currentLevelData.title}</p>
       <p class="text-xs text-muted">Aufgabe ${currentTaskIdx + 1}/${currentTasks.length}</p>
       <div class="teacher-divider"></div>
-      <p class="text-xs fw-bold" style="color:#e17055;">Aufgaben-Steuerung:</p>
+      <button class="teacher-btn" style="background:rgba(225,112,85,0.15);border-color:#e17055;font-size:0.85rem;" onclick="teacherSkipToFinish()">⏩ Nächstes Level →</button>
+      <div class="teacher-divider"></div>
+      <p class="text-xs fw-bold" style="color:#e17055;">Steuerung:</p>
       <button class="teacher-btn" onclick="teacherSkipTask()">⏭️ Aufgabe überspringen</button>
-      <button class="teacher-btn" onclick="teacherAutoCorrect()">✅ Aufgabe als richtig werten</button>
+      <button class="teacher-btn" onclick="teacherAutoCorrect()">✅ Als richtig werten</button>
       <button class="teacher-btn" onclick="teacherShowAnswer()">👁️ Lösung anzeigen</button>
-      <button class="teacher-btn" onclick="teacherSkipToSim()">🔬 Zur Simulation springen</button>
-      <button class="teacher-btn" onclick="teacherCompleteLevel()">🏁 Level abschließen (100%)</button>
+      <button class="teacher-btn" onclick="teacherSkipToSim()">🔬 Zur Simulation</button>
+      <button class="teacher-btn" onclick="teacherCompleteLevel()">🏁 Level abschließen</button>
       <div class="teacher-divider"></div>
     `;
   }
@@ -4110,8 +4302,9 @@ function updateTeacherPanel() {
 function teacherSkipTask() {
   if (!currentLevelData) return;
   currentTaskIdx++;
+  currentCorrect++;
   if (currentTaskIdx >= currentTasks.length) {
-    showSimulation();
+    showSelfAssessment('after', currentLevelData.id);
   } else {
     renderTask();
   }
@@ -4175,10 +4368,46 @@ function teacherShowAnswer() {
 
 function teacherSkipToSim() {
   if (!currentLevelData) return;
-  currentTaskIdx = currentTasks.length;
-  currentCorrect = currentTasks.length; // Count all as correct
   showSimulation();
   updateTeacherPanel();
+}
+
+function teacherSkipPhase(phase, lvlId) {
+  // Skip self-assessment
+  if (phase === 'before') {
+    // Skip to simulation
+    showSimulation();
+  } else {
+    // Skip to finish
+    currentCorrect = currentTasks.length;
+    finishLevel(lvlId);
+  }
+}
+
+function teacherSkipToFinish() {
+  if (!currentLevelData) return;
+  // Stop animation if running
+  cancelAnimationFrame(parseInt(document.getElementById('simCanvas')?.dataset.animId) || 0);
+  // Complete level and go to next
+  const lvlId = currentLevelData.id;
+  const ls = S.levels[lvlId];
+  ls.completed = true;
+  ls.score = 100;
+  ls.xpEarned = 100;
+  ls.timeSpent = Date.now() - levelStartTime;
+  if (lvlId < 10) {
+    S.levels[lvlId + 1].unlocked = true;
+    S.currentLevel = Math.max(S.currentLevel, lvlId + 1);
+  }
+  saveState();
+  // Auto-jump to next level
+  if (lvlId < 10) {
+    showNotification(`✅ Level ${lvlId} übersprungen → Level ${lvlId + 1}`, '');
+    startLevel(lvlId + 1);
+  } else {
+    showNotification(`✅ Level ${lvlId} übersprungen – Alle Level fertig!`, '');
+    showScreen('dashboard');
+  }
 }
 
 function teacherCompleteLevel() {
