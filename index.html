@@ -1347,6 +1347,24 @@ function showNotification(msg, cls = '') {
 // NAVIGATION
 // ============================================================
 function showScreen(name) {
+  // Auto-save unsaved journal entry before leaving
+  const journalInput = document.getElementById('journalEntry');
+  if (journalInput && journalInput.value.trim().length > 0) {
+    const lvlId = currentLevelData?.id;
+    S.journal.push({ date: new Date().toISOString(), level: lvlId !== undefined ? lvlId : null, text: journalInput.value.trim() });
+    saveState();
+    checkBadges();
+    showNotification('📝 Tagebucheintrag automatisch gespeichert!', '');
+  }
+  // Also save any new journal entry from journal screen
+  const newJEntry = document.getElementById('newJournalEntry');
+  if (newJEntry && newJEntry.value.trim().length > 0) {
+    S.journal.push({ date: new Date().toISOString(), level: null, text: newJEntry.value.trim() });
+    saveState();
+    checkBadges();
+  }
+  // Save state before switching
+  saveState();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(`screen-${name}`).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b => {
@@ -1616,6 +1634,40 @@ const LEVELS = [
     id: 0, title: 'Alltag → Energie verstehen', icon: '🏠',
     description: 'Was ist Energie? Entdecke Energie in deinem Alltag.',
     objectives: ['Erklären, was Energie ist', 'Energieformen im Alltag erkennen', 'Energieumwandlungen beschreiben'],
+    theoryIntro: 'Energie ist eines der wichtigsten Konzepte in der Physik – und du begegnest ihr jeden Tag! Lass mich dir erklären, was Energie eigentlich ist.',
+    theory: [
+      { icon: '⚡', title: 'Was ist Energie?', html: `
+        <p>Stell dir vor: Neue Ziegel müssen aufs Dach. Dachdecker tragen sie hoch, ein Fahrstuhl hebt sie, oder ein Kran bewegt sie nach oben. In <strong>allen drei Fällen wird Energie benötigt</strong>.</p>
+        <p class="mt-1">Energie braucht man, um etwas <strong>hochzuheben, in Bewegung zu setzen, zu erwärmen oder zum Leuchten zu bringen</strong>.</p>
+        <div class="formula mt-1">Energie = Die Fähigkeit, etwas zu verändern (Arbeit zu verrichten)</div>
+      `},
+      { icon: '🔋', title: 'Die 7 Energieformen', html: `
+        <p>Energie kann in vielen verschiedenen Formen auftreten:</p>
+        <div class="mt-1" style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;">
+          <div class="formula" style="font-size:0.8rem;">📦 <strong>Lageenergie</strong><br>In hochgehobenen Gegenständen</div>
+          <div class="formula" style="font-size:0.8rem;">🏃 <strong>Bewegungsenergie</strong><br>In allem, was sich bewegt</div>
+          <div class="formula" style="font-size:0.8rem;">🏹 <strong>Spannenergie</strong><br>In gespannten Federn/Bögen</div>
+          <div class="formula" style="font-size:0.8rem;">🍫 <strong>Chemische Energie</strong><br>In Nahrung und Treibstoffen</div>
+          <div class="formula" style="font-size:0.8rem;">🔥 <strong>Thermische Energie</strong><br>In heißem Wasser, warmer Luft</div>
+          <div class="formula" style="font-size:0.8rem;">⚡ <strong>Elektrische Energie</strong><br>In Leitungen, Batterien</div>
+          <div class="formula" style="font-size:0.8rem;">☀️ <strong>Strahlungsenergie</strong><br>Licht, Sonnenstrahlen</div>
+        </div>
+      `},
+      { icon: '🔄', title: 'Energieumwandlung', html: `
+        <p>Viele Geräte wandeln Energie von einer Form in eine andere um. Man nennt sie <strong>Energiewandler</strong>.</p>
+        <p class="mt-1"><strong>Beispiel Kraftwerk:</strong></p>
+        <div class="formula mt-1" style="text-align:center;font-size:0.85rem;">Chemische Energie → 🔥 Thermische Energie → ⚙️ Bewegungsenergie → ⚡ Elektrische Energie</div>
+        <p class="mt-1"><p class="mt-1"><strong>Wichtig:</strong> Energie kann nicht erzeugt oder zerstört werden – sie ändert nur ihre Form! Die Gesamtmenge bleibt immer gleich. Das nennt man den <strong>Energieerhaltungssatz</strong>.</p>
+        <p class="mt-1">Energie kann <strong>gespeichert</strong> werden: in Batterien, Federn, Nahrung, hochgepumptem Wasser. Und sie kann <strong>transportiert</strong> werden: durch Leitungen, Licht, Treibstoffe, warmes Wasser.</p>
+      `},
+      { icon: '📏', title: 'Die Einheit der Energie: Joule', html: `
+        <p>Energie wird in der Einheit <strong>Joule (J)</strong> gemessen, benannt nach dem Physiker James Prescott Joule.</p>
+        <div class="formula mt-1">1 Joule = Die Energie, um eine Tafel Schokolade (100 g) um 1 m hochzuheben</div>
+        <p class="mt-1">Das ist sehr wenig! Deshalb nutzt man oft größere Einheiten:</p>
+        <p><strong>1 kJ</strong> (Kilojoule) = 1.000 J &nbsp;|&nbsp; <strong>1 MJ</strong> (Megajoule) = 1.000.000 J</p>
+        <p class="mt-1 text-sm text-muted">Ein Schokoriegel enthält etwa 1.000 kJ = 1 MJ Energie – genug, um 100 kg auf 1000 m Höhe zu heben!</p>
+      `}
+    ],
     tasks: {
       basis: [
         { type: 'choice', q: 'Was beschreibt Energie am besten?', options: ['Die Fähigkeit, Arbeit zu verrichten', 'Eine Art von Materie', 'Nur Strom aus der Steckdose', 'Ein Gefühl von Kraft'], correct: 0, xp: 15, explain: 'Energie ist die Fähigkeit eines Körpers oder Systems, Arbeit zu verrichten. Das kann Bewegung, Erwärmung oder Verformung sein.', hints: ['Denke daran: Was passiert, wenn ein Gegenstand Energie hat?', 'Energie ermöglicht Veränderungen – welche Antwort passt dazu?', 'Physiker definieren Energie als die Fähigkeit, etwas zu bewirken.'] },
@@ -1636,6 +1688,11 @@ const LEVELS = [
         { type: 'explain', q: 'Du wirfst einen Ball senkrecht nach oben. Beschreibe die Energieumwandlungen vom Abwurf bis zum Zurückfallen in deine Hand.', correctKey: 'kette', acceptWords: ['kinetisch', 'lageenergie', 'umwandlung', 'höchst', 'null', 'maximal', 'schneller', 'langsamer'], xp: 30, explain: 'Abwurf: kinetische Energie ist maximal. Aufstieg: kinetisch → Lageenergie (Ball wird langsamer). Höchster Punkt: nur Lageenergie, v=0. Fallen: Lageenergie → kinetisch (Ball wird schneller). Fangen: kinetische Energie wird durch Hand absorbiert.', hints: ['Starte beim Abwurf – welche Energieform dominiert?', 'Was passiert mit der Geschwindigkeit nach oben?', 'Am höchsten Punkt – wie schnell ist der Ball?'] },
       ]
     },
+    simQuestions: [
+      { q: 'Wenn du in der Simulation den Startwinkel des Pendels vergrößerst, was passiert mit der maximalen Geschwindigkeit am tiefsten Punkt?', options: ['Sie wird kleiner', 'Sie bleibt gleich', 'Sie wird größer', 'Sie wird null'], correct: 2, xp: 10, explain: 'Größerer Winkel = größere Starthöhe = mehr Lageenergie. Am tiefsten Punkt wird alles in kinetische Energie umgewandelt → höhere Geschwindigkeit.' },
+      { q: 'Beobachte die Energiebalken: Wenn das Pendel am tiefsten Punkt ist, welcher Balken ist am größten?', options: ['Lageenergie', 'Kinetische Energie', 'Beide gleich groß', 'Beide null'], correct: 1, xp: 10, explain: 'Am tiefsten Punkt ist die Höhe minimal (Lageenergie ≈ 0) und die Geschwindigkeit maximal. Der kinetische Energie-Balken ist am größten.' },
+      { q: 'Was passiert mit der Gesamtenergie (lila Balken), wenn das Pendel hin und her schwingt?', options: ['Sie wird größer', 'Sie wird kleiner', 'Sie bleibt fast gleich', 'Sie schwankt stark'], correct: 2, xp: 10, explain: 'Die Gesamtenergie bleibt nahezu gleich – Energie ändert nur ihre Form (Lage ↔ kinetisch), aber es kommt keine neue dazu und keine verschwindet.' },
+    ],
     sim: {
       type: 'pendulum',
       title: 'Pendel-Simulation',
@@ -1648,6 +1705,31 @@ const LEVELS = [
     id: 1, title: 'Aufzug → Lageenergie', icon: '🏗️',
     description: 'Verstehe die Lageenergie (potenzielle Energie) am Beispiel eines Aufzugs.',
     objectives: ['Die Formel E_pot = m · g · h anwenden', 'Lageenergie berechnen', 'Den Einfluss von Masse und Höhe verstehen'],
+    theoryIntro: 'Jetzt wird es konkret! Du lernst, wie man Lageenergie berechnet – mit einer einfachen Formel.',
+    theory: [
+      { icon: '📦', title: 'Was ist Lageenergie?', html: `
+        <p>Wenn du einen Gegenstand hochhebst, hat er danach mehr Energie als vorher. Diese Energie heißt <strong>Lageenergie</strong> (oder potenzielle Energie).</p>
+        <p class="mt-1">Die Energie wird im hochgehobenen Gegenstand <strong>gespeichert</strong>. Lässt du ihn fallen, wird sie in Bewegungsenergie umgewandelt.</p>
+        <p class="mt-1 text-sm text-muted">Beispiele: Wasser im Stausee, Buch auf dem Regal, Person im Aufzug</p>
+      `},
+      { icon: '📐', title: 'Die Formel für Lageenergie', html: `
+        <div class="formula" style="font-size:1.1rem;text-align:center;">E<sub>pot</sub> = m · g · h</div>
+        <div class="mt-1" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;text-align:center;">
+          <div class="formula" style="font-size:0.8rem;"><strong>m</strong><br>Masse in kg</div>
+          <div class="formula" style="font-size:0.8rem;"><strong>g</strong><br>Ortsfaktor<br>≈ 10 N/kg</div>
+          <div class="formula" style="font-size:0.8rem;"><strong>h</strong><br>Höhe in m</div>
+        </div>
+        <p class="mt-1">Der <strong>Ortsfaktor g</strong> (auch Erdbeschleunigung) beträgt auf der Erde etwa 9,81 N/kg. Zum Rechnen runden wir auf <strong>g = 10 m/s²</strong>.</p>
+      `},
+      { icon: '🧮', title: 'Rechenbeispiel', html: `
+        <p><strong>Aufgabe:</strong> Ein 3 kg Stein liegt auf einem 4 m hohen Regal. Wie groß ist seine Lageenergie?</p>
+        <div class="formula mt-1">E<sub>pot</sub> = m · g · h = 3 kg · 10 m/s² · 4 m = <strong>120 J</strong></div>
+        <p class="mt-1"><strong>Wichtig:</strong></p>
+        <p>• Doppelte Masse → doppelte Lageenergie (proportional)</p>
+        <p>• Doppelte Höhe → doppelte Lageenergie (proportional)</p>
+        <p class="mt-1 text-sm text-muted">Vergiss nie den Faktor g! Ohne g rechnest du falsch (3·4=12 statt 3·10·4=120).</p>
+      `}
+    ],
     tasks: {
       basis: [
         { type: 'choice', q: 'Von welchen Größen hängt die Lageenergie ab?', options: ['Nur von der Masse', 'Nur von der Höhe', 'Von Masse, Erdbeschleunigung und Höhe', 'Von der Geschwindigkeit'], correct: 2, xp: 10, explain: 'Die Lageenergie hängt von drei Größen ab: Masse (m), Erdbeschleunigung (g ≈ 10 m/s²) und Höhe (h). Formel: E_pot = m · g · h', hints: ['Die Formel hat drei Faktoren.', 'Masse und Höhe spielen eine Rolle.', 'Vergiss die Erdbeschleunigung nicht!'] },
@@ -1668,6 +1750,11 @@ const LEVELS = [
         { type: 'explain', q: 'Warum haben Bergseen oft kühles Wasser, und welche Rolle spielt die Lageenergie des Wassers für Wasserkraftwerke?', correctKey: 'wasserkraft', acceptWords: ['lageenergie', 'höhe', 'turbine', 'umwandlung', 'fallen', 'kinetisch', 'strom', 'generator'], xp: 35, explain: 'Das Wasser im Bergsee hat aufgrund der großen Höhe viel Lageenergie. Im Wasserkraftwerk fließt es nach unten, wobei die Lageenergie in kinetische Energie umgewandelt wird. Die Turbine wandelt diese in elektrische Energie um.', hints: ['Bergsee = große Höhe = viel…?', 'Was passiert, wenn das Wasser nach unten fließt?', 'Turbine + Generator = elektrische Energie'] },
       ]
     },
+    simQuestions: [
+      { q: 'Du hast den Aufzug auf Etage 10 fahren lassen. Was ist mit der Lageenergie passiert?', options: ['Sie ist gesunken', 'Sie ist gestiegen', 'Sie ist gleich geblieben', 'Sie wurde zu Wärme'], correct: 1, xp: 10, explain: 'Höhere Etage = größere Höhe h → E_pot = m·g·h steigt. Der Aufzugmotor hat die Energie aufgebracht.' },
+      { q: 'Wenn du in der Simulation die Masse verdoppelst und die gleiche Etage ansteuerst, was passiert mit E_pot?', options: ['Wird halbiert', 'Bleibt gleich', 'Wird verdoppelt', 'Wird vervierfacht'], correct: 2, xp: 10, explain: 'E_pot = m·g·h. Bei doppelter Masse verdoppelt sich die Lageenergie, weil m direkt proportional ist.' },
+      { q: 'Der Aufzug steht im Erdgeschoss (Etage 1). Wie groß ist die Lageenergie?', options: ['Maximal', 'Sehr groß', 'Fast null (Referenzpunkt)', 'Negativ'], correct: 2, xp: 10, explain: 'Im Erdgeschoss ist h ≈ 0 (unser Referenzpunkt). Daher ist E_pot = m·g·0 = 0 J.' },
+    ],
     sim: {
       type: 'elevator',
       title: 'Aufzug-Simulation',
@@ -1680,6 +1767,23 @@ const LEVELS = [
     id: 2, title: 'Skatepark → Umwandlung', icon: '🛹',
     description: 'Erlebe Energieumwandlung zwischen Lage- und Bewegungsenergie.',
     objectives: ['Energieumwandlung beschreiben', 'Lage- und kinetische Energie vergleichen', 'Energiediagramme lesen'],
+    theoryIntro: 'Jetzt wird es spannend! Energie kann sich von einer Form in eine andere verwandeln – wie bei einem Skater in der Halfpipe.',
+    theory: [
+      { icon: '🔄', title: 'Energie wandelt sich um', html: `
+        <p>Wenn ein Skater oben auf der Halfpipe steht, hat er viel <strong>Lageenergie</strong> (weil er hoch oben ist) und keine Bewegungsenergie (weil er still steht).</p>
+        <p class="mt-1">Wenn er herunterfährt, passiert Folgendes:</p>
+        <p>• Die <strong>Höhe nimmt ab</strong> → Lageenergie wird weniger</p>
+        <p>• Die <strong>Geschwindigkeit nimmt zu</strong> → Bewegungsenergie wird mehr</p>
+        <div class="formula mt-1" style="text-align:center;">Lageenergie ⟶ Bewegungsenergie (beim Herunterfahren)<br>Bewegungsenergie ⟶ Lageenergie (beim Hochfahren)</div>
+      `},
+      { icon: '📊', title: 'Energiediagramme', html: `
+        <p>Man kann die Energieumwandlung in <strong>Balkendiagrammen</strong> darstellen:</p>
+        <p class="mt-1">• <strong>Oben:</strong> viel Lageenergie (großer Balken), wenig Bewegungsenergie (kleiner Balken)</p>
+        <p>• <strong>Mitte:</strong> beide Balken gleich groß</p>
+        <p>• <strong>Unten:</strong> wenig Lageenergie, viel Bewegungsenergie</p>
+        <p class="mt-1">Die <strong>Summe beider Balken bleibt immer gleich!</strong> Das ist der Schlüssel zur Energieerhaltung.</p>
+      `}
+    ],
     tasks: {
       basis: [
         { type: 'choice', q: 'Ein Skater steht oben auf einer Halfpipe. Welche Energieform hat er hauptsächlich?', options: ['Kinetische Energie', 'Lageenergie', 'Wärmeenergie', 'Spannenergie'], correct: 1, xp: 10, explain: 'Oben auf der Halfpipe steht der Skater still (v = 0), aber er ist hoch über dem tiefsten Punkt. Er hat also hauptsächlich Lageenergie.', hints: ['Bewegt er sich oben?', 'Wie hoch ist er über dem tiefsten Punkt?', 'Höhe → Lageenergie'] },
@@ -1704,6 +1808,11 @@ const LEVELS = [
         { type: 'explain', q: 'Erkläre, warum professionelle Skateboarder höher springen können, wenn sie aus einer tieferen Halfpipe starten.', correctKey: 'tiefe', acceptWords: ['lageenergie', 'höhe', 'kinetisch', 'geschwindigkeit', 'mehr', 'größer', 'umwandlung'], xp: 30, explain: 'Je tiefer die Halfpipe, desto mehr Lageenergie wird in kinetische Energie umgewandelt. Am tiefsten Punkt hat der Skater mehr Geschwindigkeit und kann so höher in die Luft springen.', hints: ['Tiefere Halfpipe = mehr Höhendifferenz', 'Mehr Höhe = mehr Lageenergie zum Umwandeln', 'Mehr kinetische Energie = höherer Sprung'] },
       ]
     },
+    simQuestions: [
+      { q: 'In der Halfpipe-Simulation: Wo ist der Ball am schnellsten?', options: ['Am linken Rand oben', 'Am rechten Rand oben', 'Am tiefsten Punkt (unten in der Mitte)', 'Überall gleich schnell'], correct: 2, xp: 10, explain: 'Am tiefsten Punkt wurde alle Lageenergie in kinetische Energie umgewandelt. Dort ist die Geschwindigkeit maximal.' },
+      { q: 'Du erhöhst die Reibung in der Simulation. Was beobachtest du?', options: ['Der Ball schwingt höher', 'Der Ball schwingt immer weniger hoch', 'Nichts ändert sich', 'Der Ball wird schneller'], correct: 1, xp: 10, explain: 'Mehr Reibung = mehr Energieverlust als Wärme. Bei jeder Schwingung hat der Ball weniger mechanische Energie → erreicht geringere Höhe.' },
+      { q: 'Wenn du die Starthöhe von 50% auf 90% erhöhst, was passiert mit den Energiebalken am tiefsten Punkt?', options: ['Kinetische Energie wird kleiner', 'Kinetische Energie wird viel größer', 'Beide Balken werden null', 'Nur Lageenergie steigt'], correct: 1, xp: 10, explain: 'Höherer Start = mehr Lageenergie am Anfang = mehr Gesamtenergie. Am tiefsten Punkt ist fast alles kinetische Energie → der Balken wird viel größer.' },
+    ],
     sim: {
       type: 'halfpipe',
       title: 'Halfpipe-Simulation',
@@ -1716,6 +1825,22 @@ const LEVELS = [
     id: 3, title: 'Achterbahn → Erhaltung', icon: '🎢',
     description: 'Der Energieerhaltungssatz in Aktion.',
     objectives: ['Den Energieerhaltungssatz anwenden', 'Geschwindigkeiten an verschiedenen Punkten berechnen', 'Maximale Höhe bestimmen'],
+    theoryIntro: 'Der Energieerhaltungssatz ist DAS zentrale Gesetz der Physik. Hier lernst du ihn kennen!',
+    theory: [
+      { icon: '⚖️', title: 'Der Energieerhaltungssatz', html: `
+        <p>Stell dir einen Flummi vor, der aus 1 m Höhe fällt. Was passiert?</p>
+        <p class="mt-1">• Beim Fallen: Lageenergie → Bewegungsenergie</p>
+        <p>• Beim Aufprall: Bewegungsenergie → Spannenergie (Verformung)</p>
+        <p>• Beim Hochspringen: Spannenergie → Bewegungsenergie → Lageenergie</p>
+        <div class="formula mt-1" style="text-align:center;font-size:1rem;"><strong>Energieerhaltungssatz:</strong><br>Bei allen Energieumwandlungen bleibt die <strong>Gesamtmenge an Energie erhalten</strong>.<br>Sie nimmt nicht zu und nicht ab.</div>
+      `},
+      { icon: '🔥', title: 'Energieentwertung', html: `
+        <p>Aber Moment – der Flummi springt nicht ganz so hoch zurück! Ist Energie verloren gegangen?</p>
+        <p class="mt-1"><strong>Nein!</strong> Beim Aufprall wird ein Teil der Energie in <strong>thermische Energie (Wärme)</strong> umgewandelt. Der Ball und der Boden werden minimal wärmer.</p>
+        <p class="mt-1">Diese Wärme ist zwar noch Energie, aber sie lässt sich nicht mehr sinnvoll nutzen. Man spricht von <strong>Energieentwertung</strong>.</p>
+        <div class="formula mt-1">E<sub>gesamt</sub> = E<sub>pot</sub> + E<sub>kin</sub> + E<sub>thermisch</sub> = <strong>konstant</strong></div>
+      `}
+    ],
     tasks: {
       basis: [
         { type: 'choice', q: 'An welchem Punkt einer Achterbahn ist die Geschwindigkeit am höchsten?', options: ['Am höchsten Punkt', 'Am tiefsten Punkt', 'In einer Kurve', 'Am Start'], correct: 1, xp: 10, explain: 'Am tiefsten Punkt ist die meiste Lageenergie in kinetische Energie umgewandelt. Hier ist v maximal.', hints: ['Wo ist die Lageenergie am kleinsten?', 'Am tiefsten Punkt.', 'Dort ist die kinetische Energie maximal.'] },
@@ -1740,6 +1865,11 @@ const LEVELS = [
         { type: 'explain', q: 'Erkläre, warum eine Achterbahn am Ende der Fahrt gebremst werden muss und wie die Bremsenergie genutzt werden könnte.', correctKey: 'bremsen', acceptWords: ['kinetisch', 'wärme', 'bremse', 'reibung', 'generator', 'rückgewinnung', 'rekuperation', 'energie'], xp: 30, explain: 'Am Ende hat die Achterbahn noch kinetische Energie. Die Bremsen wandeln diese in Wärme um. Moderne Systeme könnten die Energie durch Generatoren in elektrische Energie umwandeln (Rekuperation).', hints: ['Am Ende ist die Bahn noch schnell.', 'Bremsen = kinetisch → ?', 'Kann man Bremsenergie nutzen?'] },
       ]
     },
+    simQuestions: [
+      { q: 'In der Achterbahn-Simulation: Warum wird der Wagen auf dem zweiten Hügel langsamer als im ersten Tal?', options: ['Der Motor ist aus', 'Auf dem Hügel wird kinetische in Lageenergie umgewandelt', 'Die Luft bremst ihn', 'Der Wagen ist schwerer geworden'], correct: 1, xp: 10, explain: 'Bergauf wird kinetische Energie in Lageenergie umgewandelt. Die Geschwindigkeit nimmt ab, die Höhe nimmt zu.' },
+      { q: 'Könnte der Wagen in der Simulation jemals höher kommen als sein Startpunkt?', options: ['Ja, wenn er schnell genug ist', 'Ja, bei wenig Reibung', 'Nein, niemals (Energieerhaltung)', 'Ja, bergab wird er schneller'], correct: 2, xp: 10, explain: 'Energieerhaltung: Ohne zusätzliche Energie kann der Wagen nie höher als den Start kommen. Mit Reibung sogar weniger!' },
+      { q: 'Beobachte die Energiebalken: Was fällt dir über die Summe (lila Balken) während der ganzen Fahrt auf?', options: ['Sie steigt stetig', 'Sie fällt stetig', 'Sie bleibt konstant', 'Sie schwankt zufällig'], correct: 2, xp: 10, explain: 'Die Gesamtenergie bleibt konstant – das IST der Energieerhaltungssatz in Aktion! Lage- und kinetische Energie tauschen sich aus.' },
+    ],
     sim: {
       type: 'coaster',
       title: 'Achterbahn-Simulation',
@@ -1752,6 +1882,24 @@ const LEVELS = [
     id: 4, title: 'Fall → Kinetische Energie', icon: '🍎',
     description: 'Verstehe kinetische Energie beim freien Fall.',
     objectives: ['Die Formel E_kin = ½ · m · v² anwenden', 'Kinetische Energie berechnen', 'Freien Fall analysieren'],
+    theoryIntro: 'Jetzt lernst du die Formel für Bewegungsenergie – und warum doppelte Geschwindigkeit viermal so gefährlich ist!',
+    theory: [
+      { icon: '🏃', title: 'Was ist kinetische Energie?', html: `
+        <p>Jeder Gegenstand, der sich bewegt, besitzt <strong>kinetische Energie</strong> (Bewegungsenergie). Je schneller und je schwerer, desto mehr.</p>
+        <div class="formula mt-1" style="font-size:1.1rem;text-align:center;">E<sub>kin</sub> = ½ · m · v²</div>
+        <div class="mt-1" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;text-align:center;">
+          <div class="formula" style="font-size:0.8rem;"><strong>m</strong><br>Masse in kg</div>
+          <div class="formula" style="font-size:0.8rem;"><strong>v</strong><br>Geschwindigkeit in m/s</div>
+        </div>
+      `},
+      { icon: '⚠️', title: 'Achtung: v wird quadriert!', html: `
+        <p>Die Geschwindigkeit steht <strong>im Quadrat</strong> in der Formel. Das hat große Auswirkungen:</p>
+        <p class="mt-1">• <strong>Doppelte Geschwindigkeit</strong> → <strong>4-fache</strong> kinetische Energie (2² = 4)</p>
+        <p>• <strong>3-fache Geschwindigkeit</strong> → <strong>9-fache</strong> kinetische Energie (3² = 9)</p>
+        <div class="formula mt-1">Deshalb ist der Bremsweg bei doppelter Geschwindigkeit <strong>4x so lang!</strong></div>
+        <p class="mt-1"><strong>Rechenbeispiel:</strong> Auto (1000 kg) mit 20 m/s:<br>E = ½ · 1000 · 20² = ½ · 1000 · 400 = <strong>200.000 J</strong></p>
+      `}
+    ],
     tasks: {
       basis: [
         { type: 'choice', q: 'Was ist kinetische Energie?', options: ['Energie durch Höhe', 'Energie durch Bewegung', 'Energie durch Verformung', 'Energie durch Wärme'], correct: 1, xp: 10, explain: 'Kinetische Energie ist die Energie, die ein Körper aufgrund seiner Bewegung besitzt.', hints: ['Kinetisch kommt vom griechischen Wort für Bewegung.', '"kinesis" = Bewegung', 'Also: Bewegungsenergie'] },
@@ -1771,6 +1919,11 @@ const LEVELS = [
         { type: 'explain', q: 'Erkläre, warum der Bremsweg eines Autos bei doppelter Geschwindigkeit viermal so lang ist. Nutze die Formel für kinetische Energie.', correctKey: 'bremsweg', acceptWords: ['quadrat', 'v²', 'vierfach', 'kinetisch', 'doppelt', 'bremsweg', 'energie', 'arbeit'], xp: 35, explain: 'Bei doppelter Geschwindigkeit ist E_kin = ½mv² vierfach so groß. Die Bremsen müssen viermal so viel Energie abbauen. Bei gleicher Bremskraft bedeutet das den vierfachen Bremsweg.', hints: ['E_kin hängt von v² ab.', 'Doppelte v → 4-fache Energie', 'Gleiche Bremskraft, aber 4x Energie → 4x Weg'] },
       ]
     },
+    simQuestions: [
+      { q: 'In der Freier-Fall-Simulation: Was passiert mit der Geschwindigkeit, je weiter der Gegenstand fällt?', options: ['Sie bleibt konstant', 'Sie nimmt ab', 'Sie nimmt ständig zu', 'Sie wird null'], correct: 2, xp: 10, explain: 'Im freien Fall beschleunigt die Schwerkraft den Gegenstand ständig. Die Geschwindigkeit nimmt von Sekunde zu Sekunde zu (v = g·t).' },
+      { q: 'Du änderst die Masse in der Simulation. Wie beeinflusst das die Fallgeschwindigkeit?', options: ['Schwerer = schneller', 'Schwerer = langsamer', 'Masse hat keinen Einfluss auf die Fallgeschwindigkeit', 'Nur bei großer Masse fällt es schneller'], correct: 2, xp: 10, explain: 'Alle Objekte fallen gleich schnell (ohne Luftwiderstand)! Die Masse kürzt sich in der Berechnung heraus: v = √(2gh) – kein m!' },
+      { q: 'Kurz vor dem Aufprall: Wie ist das Verhältnis von Lage- zu kinetischer Energie?', options: ['Nur Lageenergie', 'Beide gleich', 'Fast nur kinetische Energie', 'Beide null'], correct: 2, xp: 10, explain: 'Kurz vor dem Boden ist die Höhe fast 0 (Lageenergie ≈ 0). Fast die gesamte Energie ist kinetisch – der Gegenstand ist am schnellsten.' },
+    ],
     sim: {
       type: 'freefall',
       title: 'Freier-Fall-Simulation',
@@ -1783,6 +1936,19 @@ const LEVELS = [
     id: 5, title: 'Trampolin → Spannenergie', icon: '🤸',
     description: 'Lerne die Spannenergie (elastische Energie) am Beispiel von Federn und Trampolinen.',
     objectives: ['Die Formel E_sp = ½ · D · s² anwenden', 'Spannenergie berechnen', 'Energieumwandlung bei Federn verstehen'],
+    theoryIntro: 'Federn, Gummibänder, Trampolintücher – sie alle können Energie speichern! Hier lernst du wie.',
+    theory: [
+      { icon: '🏹', title: 'Was ist Spannenergie?', html: `
+        <p>Wenn du eine Feder zusammendrückst oder ein Gummiband dehnst, speicherst du Energie darin. Das ist <strong>Spannenergie</strong> (elastische Energie).</p>
+        <p class="mt-1">Lässt du los, wird die Spannenergie in Bewegungsenergie umgewandelt – das Objekt schnellt davon!</p>
+        <div class="formula mt-1" style="font-size:1.1rem;text-align:center;">E<sub>sp</sub> = ½ · D · s²</div>
+        <div class="mt-1" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;text-align:center;">
+          <div class="formula" style="font-size:0.8rem;"><strong>D</strong><br>Federkonstante in N/m<br>(wie steif die Feder ist)</div>
+          <div class="formula" style="font-size:0.8rem;"><strong>s</strong><br>Auslenkung in m<br>(wie weit zusammengedrückt)</div>
+        </div>
+        <p class="mt-1">Auch hier wird s <strong>quadriert</strong>: doppelte Auslenkung = 4-fache Energie!</p>
+      `}
+    ],
     tasks: {
       basis: [
         { type: 'choice', q: 'Was ist Spannenergie?', options: ['Energie durch Bewegung', 'Energie durch Höhe', 'Energie, die in elastisch verformten Körpern gespeichert ist', 'Elektrische Energie'], correct: 2, xp: 10, explain: 'Spannenergie ist die Energie, die in elastisch verformten Körpern wie Federn, Gummibändern oder Trampolinen gespeichert ist.', hints: ['Denke an eine gespannte Feder.', 'Was passiert, wenn du sie loslässt?', 'Verformung speichert Energie.'] },
@@ -1801,6 +1967,11 @@ const LEVELS = [
         { type: 'explain', q: 'Erkläre die Energieumwandlungen bei einem vollständigen Trampolin-Sprung: vom Stehen über das Einfedern bis zum höchsten Punkt in der Luft.', correctKey: 'kette', acceptWords: ['lage', 'kinetisch', 'spannenergie', 'umwandlung', 'verformung', 'höchst', 'maximal'], xp: 30, explain: 'Stehen: E_pot (Höhe über Trampolin). Einfedern: E_pot + E_kin → E_sp (Trampolin verformt sich). Tiefster Punkt: maximale Spannenergie. Hochschnellen: E_sp → E_kin. In der Luft: E_kin → E_pot. Höchster Punkt: maximale Lageenergie.', hints: ['Starte beim Stehen auf dem Trampolin.', 'Was passiert beim Einfedern?', 'Und dann beim Hochschnellen?'] },
       ]
     },
+    simQuestions: [
+      { q: 'Du verdoppelst die Auslenkung der Feder in der Simulation. Was passiert mit der Spannenergie?', options: ['Sie verdoppelt sich', 'Sie vervierfacht sich', 'Sie halbiert sich', 'Sie bleibt gleich'], correct: 1, xp: 10, explain: 'E_sp = ½·D·s². Da s quadriert wird, bedeutet doppelte Auslenkung vierfache Spannenergie!' },
+      { q: 'Beobachte den Abschuss: Was passiert mit dem Spannenergie-Balken, wenn die Kugel fliegt?', options: ['Er bleibt groß', 'Er wird zu kinetischer Energie', 'Er wird zu Wärme', 'Er verschwindet einfach'], correct: 1, xp: 10, explain: 'Beim Loslassen wird die Spannenergie komplett in kinetische Energie der Kugel umgewandelt. Der Spannenergie-Balken sinkt, der kinetische steigt.' },
+      { q: 'Du erhöhst die Federkonstante D. Was passiert mit der Abschussgeschwindigkeit bei gleicher Auslenkung?', options: ['Sie wird kleiner', 'Sie bleibt gleich', 'Sie wird größer', 'Die Kugel fliegt gar nicht'], correct: 2, xp: 10, explain: 'Größeres D = steifere Feder = mehr Spannenergie bei gleicher Auslenkung = mehr kinetische Energie = höhere Geschwindigkeit.' },
+    ],
     sim: {
       type: 'spring',
       title: 'Feder-Simulation',
@@ -1813,6 +1984,18 @@ const LEVELS = [
     id: 6, title: 'Bungee → Kombination', icon: '🧗',
     description: 'Alle drei Energieformen in einer Situation: Bungee-Jumping!',
     objectives: ['Lage-, kinetische und Spannenergie kombinieren', 'Energiebilanzen aufstellen', 'Komplexe Umwandlungsketten analysieren'],
+    theoryIntro: 'Beim Bungee-Jumping treten alle drei mechanischen Energieformen gleichzeitig auf!',
+    theory: [
+      { icon: '🧗', title: 'Drei Energieformen auf einmal', html: `
+        <p>Beim Bungee-Jumping durchläuft der Springer eine komplette Energieumwandlungskette:</p>
+        <p class="mt-1"><strong>1. Oben auf der Brücke:</strong> Nur Lageenergie (v = 0)</p>
+        <p><strong>2. Freier Fall:</strong> Lageenergie → kinetische Energie (immer schneller)</p>
+        <p><strong>3. Seil spannt sich:</strong> kinetische Energie → Spannenergie (wird gebremst)</p>
+        <p><strong>4. Tiefster Punkt:</strong> maximale Spannenergie (v = 0, Umkehrpunkt)</p>
+        <p><strong>5. Zurückschnellen:</strong> Spannenergie → kinetische → Lageenergie</p>
+        <div class="formula mt-1">E<sub>ges</sub> = E<sub>pot</sub> + E<sub>kin</sub> + E<sub>sp</sub> = konstant</div>
+      `}
+    ],
     tasks: {
       basis: [
         { type: 'choice', q: 'Beim Bungee-Jumping: Welche Energieformen treten auf?', options: ['Nur Lageenergie', 'Lage- und kinetische Energie', 'Lage-, kinetische und Spannenergie', 'Nur Spannenergie'], correct: 2, xp: 10, explain: 'Beim Bungee-Jumping treten alle drei Energieformen auf: Lageenergie (Höhe), kinetische Energie (Fallen) und Spannenergie (Seil dehnt sich).', hints: ['Du stehst hoch oben → ?', 'Du fällst → ?', 'Das Seil dehnt sich → ?'] },
@@ -1831,6 +2014,11 @@ const LEVELS = [
         { type: 'calc', q: 'Ein 75 kg Springer springt von 45 m. Das Seil (D = 120 N/m, Länge 20 m) dehnt sich. Berechne die maximale Dehnung des Seils.', answer: 10.6, unit: 'm', tolerance: 0.5, xp: 40, explain: 'Am tiefsten Punkt: m·g·(20+s) = ½·D·s² → 750·(20+s) = 60·s² → 60s² - 750s - 15000 = 0 → s² - 12,5s - 250 = 0 → s = (12,5 + √(156,25+1000))/2 = (12,5+34)/2 ≈ 23,3... Nein, let me recalculate. 75·10·(20+s) = ½·120·s² → 750(20+s) = 60s² → 15000 + 750s = 60s² → 60s² - 750s - 15000 = 0 → s² - 12.5s - 250 = 0 → s = (12.5 + √(156.25 + 1000))/2 = (12.5 + √1156.25)/2 ≈ (12.5 + 34.0)/2 ≈ 23.25. Hmm – I need to fix this. Actually the fall height is 20m (free) + s (stretch). So the answer should be around 23.25 m but that is more than 45-20=25m available. Let me set answer properly.', answer: 23.2, unit: 'm', tolerance: 2, hints: ['Energieerhaltung aufstellen', 'Fall: 20 m frei + s Dehnung', 'Quadratische Gleichung lösen'] },
       ]
     },
+    simQuestions: [
+      { q: 'In der Bungee-Simulation: Wann wechselt die Seilanzeige von „Freier Fall" zu „Seil gespannt"?', options: ['Sofort beim Sprung', 'Wenn die Seillänge erreicht ist', 'Am tiefsten Punkt', 'Beim Zurückschnellen'], correct: 1, xp: 10, explain: 'Das Seil beginnt erst zu wirken, wenn der Springer weiter gefallen ist als die Seillänge. Vorher ist es freier Fall.' },
+      { q: 'Was passiert mit dem Spannenergie-Balken, wenn der Springer den tiefsten Punkt erreicht?', options: ['Er ist null', 'Er ist maximal', 'Er ist gleich wie die kinetische Energie', 'Er verschwindet'], correct: 1, xp: 10, explain: 'Am tiefsten Punkt ist v = 0 (kinetisch = 0) und das Seil maximal gedehnt. Die gesamte Energie steckt in der Spannenergie des Seils.' },
+      { q: 'Du erhöhst die Masse des Springers. Was beobachtest du?', options: ['Er fällt weniger tief', 'Er fällt tiefer', 'Kein Unterschied', 'Er fällt nicht mehr'], correct: 1, xp: 10, explain: 'Mehr Masse = mehr Lageenergie = mehr Energie muss im Seil gespeichert werden. Dafür braucht das Seil mehr Dehnung → tieferer Fall.' },
+    ],
     sim: {
       type: 'bungee',
       title: 'Bungee-Simulation',
@@ -1843,6 +2031,16 @@ const LEVELS = [
     id: 7, title: 'Fahrrad → Leistung', icon: '🚲',
     description: 'Verstehe den Zusammenhang zwischen Energie und Zeit: die Leistung.',
     objectives: ['Die Formel P = E/t anwenden', 'Leistung in verschiedenen Situationen berechnen', 'Leistung und Energie unterscheiden'],
+    theoryIntro: 'Leistung sagt dir, wie SCHNELL Energie umgewandelt wird. Ein wichtiger Unterschied!',
+    theory: [
+      { icon: '⏱️', title: 'Was ist Leistung?', html: `
+        <p>Zwei Radfahrer fahren denselben Berg hoch. Anna braucht 5 Minuten, Ben braucht 10 Minuten. Beide leisten die <strong>gleiche Arbeit</strong> (gleiche Höhe, gleiche Masse). Aber Anna wandelt die Energie <strong>doppelt so schnell</strong> um – sie hat die <strong>doppelte Leistung</strong>!</p>
+        <div class="formula mt-1" style="font-size:1.1rem;text-align:center;">P = E / t</div>
+        <p class="mt-1"><strong>P</strong> = Leistung in Watt (W) &nbsp;|&nbsp; <strong>E</strong> = Energie in Joule &nbsp;|&nbsp; <strong>t</strong> = Zeit in Sekunden</p>
+        <div class="formula mt-1">1 Watt = 1 Joule pro Sekunde &nbsp;|&nbsp; 1 kW = 1000 W</div>
+        <p class="mt-1 text-sm text-muted">⚠️ Achtung: Zeit immer in Sekunden! (5 min = 300 s)</p>
+      `}
+    ],
     tasks: {
       basis: [
         { type: 'choice', q: 'Was beschreibt die physikalische Größe "Leistung"?', options: ['Wie viel Energie insgesamt umgewandelt wird', 'Wie schnell Energie umgewandelt wird', 'Wie hoch ein Gegenstand ist', 'Wie schwer ein Gegenstand ist'], correct: 1, xp: 10, explain: 'Leistung beschreibt, wie schnell Energie umgewandelt wird – also Energie pro Zeit.', hints: ['Ein starker Motor wandelt Energie schnell um.', 'P = E / t', 'Energie PRO Zeit'] },
@@ -1861,6 +2059,10 @@ const LEVELS = [
         { type: 'explain', q: 'Erkläre den Unterschied zwischen einem 100 W und einem 500 W Motor, wenn beide die gleiche Arbeit verrichten.', correctKey: 'zeit', acceptWords: ['zeit', 'schneller', 'langsamer', 'gleiche', 'arbeit', 'energie', 'leistung', 'weniger'], xp: 30, explain: 'Beide verrichten die gleiche Arbeit/Energie. Der 500 W Motor ist 5x so leistungsstark und schafft die gleiche Arbeit in 1/5 der Zeit. Leistung = Energie/Zeit.', hints: ['Gleiche Arbeit, verschiedene Leistung.', 'Mehr Leistung = weniger Zeit', 'P = E/t → t = E/P'] },
       ]
     },
+    simQuestions: [
+      { q: 'In der Fahrrad-Simulation: Du verdoppelst die Leistung. Was passiert mit der benötigten Zeit?', options: ['Sie verdoppelt sich', 'Sie halbiert sich', 'Sie bleibt gleich', 'Sie vervierfacht sich'], correct: 1, xp: 10, explain: 'P = E/t → t = E/P. Doppelte Leistung bei gleicher Arbeit = halbe Zeit. Der Radfahrer ist doppelt so schnell oben!' },
+      { q: 'Du verdoppelst die Berghöhe. Was passiert mit der benötigten Energie?', options: ['Sie verdoppelt sich', 'Sie bleibt gleich', 'Sie halbiert sich', 'Sie vervierfacht sich'], correct: 0, xp: 10, explain: 'E = m·g·h. Doppelte Höhe = doppelte Lageenergie. Der Radfahrer muss doppelt so viel Energie aufbringen.' },
+    ],
     sim: {
       type: 'bike',
       title: 'Fahrrad-Bergfahrt',
@@ -1873,6 +2075,18 @@ const LEVELS = [
     id: 8, title: 'Reibung → Verluste', icon: '🔥',
     description: 'Verstehe, warum in der Realität immer Energie „verloren" geht.',
     objectives: ['Reibungsverluste erklären', 'Wirkungsgrad berechnen', 'Energiebilanzen mit Verlusten aufstellen'],
+    theoryIntro: 'In der echten Welt geht bei jeder Energieumwandlung etwas als Wärme verloren. Wie viel? Das misst der Wirkungsgrad!',
+    theory: [
+      { icon: '🔥', title: 'Reibung wandelt Energie in Wärme um', html: `
+        <p>Reibe deine Hände schnell aneinander – sie werden warm! Das ist <strong>Reibung</strong>: Mechanische Energie wird in thermische Energie umgewandelt.</p>
+        <p class="mt-1">Deshalb kommt ein Schlitten auf rauem Boden schneller zum Stehen als auf Eis – mehr Reibung = mehr Energieverlust.</p>
+      `},
+      { icon: '📊', title: 'Der Wirkungsgrad', html: `
+        <div class="formula" style="font-size:1.1rem;text-align:center;">η = E<sub>nutz</sub> / E<sub>zugeführt</sub></div>
+        <p class="mt-1">Der <strong>Wirkungsgrad η</strong> (griechisch: Eta) gibt an, welcher Anteil der zugeführten Energie tatsächlich genutzt wird. Er liegt immer zwischen 0 und 1 (oder 0% und 100%).</p>
+        <p class="mt-1"><strong>Beispiel:</strong> Ein Motor bekommt 1000 J, aber nur 700 J werden zu Bewegung. η = 700/1000 = 0,7 = <strong>70%</strong>. Die restlichen 300 J wurden zu Wärme.</p>
+      `}
+    ],
     tasks: {
       basis: [
         { type: 'choice', q: 'Was passiert mit der mechanischen Energie bei Reibung?', options: ['Sie verschwindet', 'Sie wird in Wärme umgewandelt', 'Sie wird mehr', 'Nichts'], correct: 1, xp: 10, explain: 'Bei Reibung wird mechanische Energie in Wärmeenergie umgewandelt. Die Gesamtenergie bleibt erhalten, aber die nutzbare mechanische Energie nimmt ab.', hints: ['Reibe deine Hände schnell aneinander – was passierst?', 'Warm!', 'Mechanische Energie → Wärme'] },
@@ -1891,6 +2105,11 @@ const LEVELS = [
         { type: 'calc', q: 'Ein Kohlekraftwerk hat η = 40%. Wie viel Kohle (Heizwert 30.000 kJ/kg) braucht man, um 6.000 kJ elektrische Energie zu erzeugen?', answer: 0.5, unit: 'kg', tolerance: 0.05, xp: 35, explain: 'E_zugeführt = 6000/0,4 = 15.000 kJ. Masse = 15.000/30.000 = 0,5 kg', hints: ['E_zugeführt = E_nutz / η', '6000 / 0,4 = 15.000 kJ', '15.000 / 30.000 = 0,5 kg'] },
       ]
     },
+    simQuestions: [
+      { q: 'In der Reibungs-Simulation: Was zeigt das Thermometer an, wenn der Block zum Stehen kommt?', options: ['Nichts – keine Änderung', 'Die gesamte kinetische Startenergie als Wärme', 'Nur die Hälfte der Energie', 'Weniger als am Anfang'], correct: 1, xp: 10, explain: 'Wenn v = 0, ist die gesamte kinetische Startenergie durch Reibung in Wärme umgewandelt worden. Das Thermometer zeigt genau diesen Betrag.' },
+      { q: 'Du erhöhst den Reibungskoeffizienten. Was passiert?', options: ['Der Block gleitet weiter', 'Der Block stoppt schneller', 'Kein Unterschied', 'Der Block wird schneller'], correct: 1, xp: 10, explain: 'Mehr Reibung = größere Bremskraft = schnellerer Energieverlust = kürzerer Bremsweg. Der Block kommt schneller zum Stehen.' },
+      { q: 'Beobachte: Wenn der Block stoppt, wie groß ist die Summe aus kinetischer Energie und Wärmeenergie verglichen mit dem Start?', options: ['Größer als am Start', 'Kleiner als am Start', 'Genau gleich wie am Start', 'Null'], correct: 2, xp: 10, explain: 'Energieerhaltung! E_kin(Start) = E_kin(Ende) + E_Wärme. Die Gesamtenergie bleibt gleich, nur die Form hat sich geändert.' },
+    ],
     sim: {
       type: 'friction',
       title: 'Reibungs-Simulation',
@@ -1903,6 +2122,15 @@ const LEVELS = [
     id: 9, title: 'Challenge → Transfer', icon: '🧩',
     description: 'Wende dein gesamtes Wissen in neuen, unbekannten Situationen an.',
     objectives: ['Wissen auf neue Kontexte übertragen', 'Komplexe Probleme lösen', 'Energiekonzepte verbinden'],
+    theoryIntro: 'Du kennst jetzt alle Energieformen und Formeln. Zeit, sie in neuen Situationen anzuwenden!',
+    theory: [
+      { icon: '🧩', title: 'Alles zusammen', html: `
+        <p>Du hast jetzt alle Werkzeuge gelernt:</p>
+        <div class="formula mt-1">E<sub>pot</sub> = m·g·h &nbsp;|&nbsp; E<sub>kin</sub> = ½·m·v² &nbsp;|&nbsp; E<sub>sp</sub> = ½·D·s² &nbsp;|&nbsp; P = E/t</div>
+        <p class="mt-1">Zusammen mit dem <strong>Energieerhaltungssatz</strong> und dem <strong>Wirkungsgrad</strong> kannst du fast jedes Energieproblem lösen!</p>
+        <p class="mt-1">In diesem Level wendest du alles auf <strong>neue, unbekannte Situationen</strong> an: Meteoriten, Raumfähren, Kraftwerke und mehr.</p>
+      `}
+    ],
     tasks: {
       basis: [
         { type: 'choice', q: 'Ein Meteorit fällt aus dem Weltraum auf die Erde. Welche Energieumwandlung findet statt?', options: ['Nur Lageenergie → Wärme', 'Lageenergie → kinetische Energie → Wärme + Licht + Schall', 'Keine Energieumwandlung', 'Kinetische → Lageenergie'], correct: 1, xp: 15, explain: 'Der Meteorit wandelt seine immense Lageenergie in kinetische Energie um (er wird immer schneller). Beim Aufprall wird diese in Wärme, Licht und Schall umgewandelt.', hints: ['Er fällt aus großer Höhe.', 'Er wird sehr schnell.', 'Beim Aufprall: extreme Energieumwandlung'] },
@@ -1921,6 +2149,10 @@ const LEVELS = [
         { type: 'explain', q: 'Analysiere die Energieumwandlungskette eines Smartphones vom Kraftwerk bis zum leuchtenden Display. Nenne mindestens 4 Umwandlungsschritte.', correctKey: 'kette', acceptWords: ['kraftwerk', 'elektrisch', 'chemisch', 'batterie', 'licht', 'wärme', 'umwandlung', 'leitung'], xp: 35, explain: 'Kraftwerk: chemisch/kinetisch → elektrisch. Leitung: Verluste (Wärme). Ladegerät: elektrisch → chemische Energie (Batterie). Nutzung: chemisch → elektrisch → Licht + Schall + Wärme.', hints: ['Starte beim Kraftwerk.', 'Wie kommt der Strom zum Handy?', 'Was passiert in der Batterie?'] },
       ]
     },
+    simQuestions: [
+      { q: 'In der Energiekette: Welcher Schritt hat den niedrigsten Wirkungsgrad?', options: ['Sonne → Pflanze', 'Pflanze → Nahrung', 'Muskel → Bewegung', 'Generator → Licht'], correct: 0, xp: 10, explain: 'Photosynthese hat nur ca. 2% Wirkungsgrad. Pflanzen wandeln nur einen winzigen Teil der Sonnenstrahlung in chemische Energie um.' },
+      { q: 'Was fällt dir auf, wenn du die Energiebalken beobachtest? Was passiert mit der Gesamtenergie entlang der Kette?', options: ['Sie bleibt gleich', 'Sie nimmt ab, weil bei jedem Schritt Wärme verloren geht', 'Sie nimmt zu', 'Sie schwankt zufällig'], correct: 1, xp: 10, explain: 'Bei JEDEM Umwandlungsschritt geht ein Teil als Wärme verloren. Die nutzbare Energie nimmt von Stufe zu Stufe ab – Energieentwertung!' },
+    ],
     sim: {
       type: 'energy_chain',
       title: 'Energiekette',
@@ -1933,6 +2165,18 @@ const LEVELS = [
     id: 10, title: 'Projekt → Anwendung', icon: '🚀',
     description: 'Dein Abschlussprojekt: Zeige, was du gelernt hast!',
     objectives: ['Alle Energiekonzepte anwenden', 'Reale Probleme analysieren', 'Physikalisch argumentieren'],
+    theoryIntro: 'Das ist dein Abschluss-Level! Zeig, was du alles über Energie gelernt hast.',
+    theory: [
+      { icon: '🚀', title: 'Dein Wissen auf einen Blick', html: `
+        <p>Du hast in 10 Levels gelernt:</p>
+        <p>• <strong>7 Energieformen</strong> und wo sie im Alltag vorkommen</p>
+        <p>• <strong>3 Formeln</strong> für mechanische Energie (Lage, kinetisch, Spann)</p>
+        <p>• <strong>Leistung</strong> als Energie pro Zeit</p>
+        <p>• <strong>Energieerhaltung</strong> – Energie kann nur umgewandelt werden</p>
+        <p>• <strong>Wirkungsgrad</strong> – wie viel Energie wirklich genutzt wird</p>
+        <p class="mt-1">In diesem Projekt-Level löst du <strong>echte Probleme</strong> aus der Welt um dich herum!</p>
+      `}
+    ],
     tasks: {
       basis: [
         { type: 'explain', q: 'Projekt 1: Entwirf einen Spielplatz, der Energie erzeugt! Beschreibe mindestens 3 Spielgeräte und welche Energieumwandlungen stattfinden.', correctKey: 'spielplatz', acceptWords: ['rutsche', 'schaukel', 'wippe', 'karussell', 'trampolin', 'lage', 'kinetisch', 'generator', 'strom', 'umwandlung'], xp: 30, explain: 'Beispiel: Rutsche (Lage→kinetisch→Generator am Fuß), Schaukel (Lage↔kinetisch, Generator), Trampolin (Spann↔kinetisch, Piezoelemente), Karussell (kinetisch→Generator).', hints: ['Denke an Spielgeräte mit Bewegung.', 'Wo wird Energie umgewandelt?', 'Wie könnte man einen Generator anbringen?'] },
@@ -1951,6 +2195,9 @@ const LEVELS = [
         { type: 'calc', q: 'Bonus: Ein 80 kg Springer erreicht im freien Fall 200 km/h (≈56 m/s). Welcher Anteil seiner ursprünglichen Lageenergie (4000 m) ist zu diesem Zeitpunkt kinetische Energie?', answer: 3.9, unit: '%', tolerance: 0.5, xp: 40, explain: 'E_pot_start = 80·10·4000 = 3.200.000 J. E_kin = ½·80·56² = ½·80·3136 = 125.440 J. Anteil = 125.440/3.200.000 ≈ 3,9%. Der Rest ist Wärme (Luftreibung)!', hints: ['E_pot = m·g·h', 'E_kin = ½·m·v²', 'Anteil = E_kin/E_pot × 100%'] },
       ]
     },
+    simQuestions: [
+      { q: 'Die Simulation zeigt dieselbe Energiekette wie in Level 9. Was ist der wichtigste Unterschied zwischen erneuerbaren und fossilen Energieträgern?', options: ['Erneuerbare haben keinen Wirkungsgrad', 'Fossile erzeugen Energie, erneuerbare nicht', 'Erneuerbare nutzen natürliche Energieflüsse, fossile verbrauchen gespeicherte chemische Energie', 'Es gibt keinen Unterschied'], correct: 2, xp: 10, explain: 'Erneuerbare Energien (Wind, Sonne, Wasser) nutzen ständig vorhandene Energieflüsse. Fossile Brennstoffe verbrauchen in Millionen Jahren gespeicherte chemische Energie unwiderruflich.' },
+    ],
     sim: {
       type: 'project',
       title: 'Energie-Überblick',
@@ -2262,6 +2509,8 @@ function startLevel(lvlId) {
   currentCorrect = 0;
   currentHints = 0;
   currentAttempts = 0;
+  simQIdx = 0;
+  simQCorrect = 0;
   levelStartTime = Date.now();
   ls.attempts++;
   ls.startTime = Date.now();
@@ -2313,11 +2562,42 @@ function submitAssessment(phase, lvlId, value) {
   saveState();
 
   if (phase === 'before') {
-    // NEW FLOW: Simulation comes BEFORE tasks
-    showSimulation();
+    showTheory();
   } else {
     finishLevel(lvlId);
   }
+}
+
+// ============================================================
+// THEORY PAGES (Erklärtexte vor der Simulation)
+// ============================================================
+function showTheory() {
+  const el = document.getElementById('screen-game');
+  showScreen('game');
+  if (teacherMode) updateTeacherPanel();
+  const lvl = currentLevelData;
+  const theory = lvl.theory || [];
+
+  if (theory.length === 0) { showSimulation(); return; }
+
+  // Show theory as scrollable cards
+  let theoryHTML = theory.map((section, i) => `
+    <div class="card" style="animation-delay:${i*0.1}s;">
+      ${section.title ? `<h3>${section.icon || '📖'} ${section.title}</h3>` : ''}
+      <div class="mt-1">${section.html}</div>
+    </div>
+  `).join('');
+
+  el.innerHTML = `
+    <div class="card card-glow">
+      <h2>${lvl.icon} Level ${lvl.id}: ${lvl.title}</h2>
+      <p class="text-sm text-muted">Lies dir die Erklärung durch, bevor du zur Simulation und den Aufgaben kommst.</p>
+    </div>
+    ${avatarBubble(lvl.theoryIntro || 'Bevor wir loslegen, erkläre ich dir die wichtigsten Grundlagen zu diesem Thema. Lies aufmerksam!', 'tip') ? `<div class="card">${avatarBubble(lvl.theoryIntro || 'Bevor wir loslegen, erkläre ich dir die wichtigsten Grundlagen. Lies aufmerksam!', 'tip')}</div>` : ''}
+    ${theoryHTML}
+    <button class="btn btn-primary btn-block mt-2" onclick="showSimulation()">Verstanden – zur Simulation! 🔬</button>
+    ${teacherMode ? `<button class="btn btn-secondary btn-block mt-1" style="border-color:#e17055;color:#e17055;" onclick="teacherSkipToFinish()">🎓 Überspringen →</button>` : ''}
+  `;
 }
 
 function renderTask() {
@@ -2532,7 +2812,7 @@ function answerCalc() {
 
 function answerText() {
   const input = document.getElementById('textInput');
-  const val = input.value.toLowerCase().trim();
+  const val = input.value.trim();
   const task = currentTasks[currentTaskIdx];
   const taskKey = `${currentLevelData.id}-${currentTaskIdx}`;
   S.levels[currentLevelData.id].taskAttempts[taskKey] = (S.levels[currentLevelData.id].taskAttempts[taskKey] || 0) + 1;
@@ -2542,12 +2822,47 @@ function answerText() {
     return;
   }
 
-  const matchCount = task.acceptWords.filter(w => val.includes(w.toLowerCase())).length;
-  if (matchCount >= 2) {
+  const result = evaluateTextAnswer(val, task);
+  if (result.correct) {
     handleCorrect(task, taskKey);
   } else {
     handleIncorrect(task, taskKey);
   }
+}
+
+function evaluateTextAnswer(text, task) {
+  const t = text.toLowerCase().replace(/[.,!?;:'"()-]/g, ' ').replace(/\s+/g, ' ');
+  const words = task.acceptWords || [];
+  
+  // Build word stems for fuzzy matching
+  function normalize(w) { return w.toLowerCase().replace(/[.,!?;:'"()-]/g, ''); }
+  function stemMatch(text, word) {
+    const w = normalize(word);
+    if (w.length <= 3) return text.includes(w);
+    // Check exact, then stem (first 4+ chars)
+    if (text.includes(w)) return true;
+    const stem = w.substring(0, Math.max(4, Math.floor(w.length * 0.7)));
+    return text.includes(stem);
+  }
+
+  let matchCount = 0;
+  let matchedWords = [];
+  words.forEach(w => {
+    if (stemMatch(t, w)) { matchCount++; matchedWords.push(w); }
+  });
+
+  // Also check for negation errors (saying the opposite)
+  const negations = ['nicht', 'kein', 'nie', 'falsch', 'unmöglich'];
+  const hasNegation = negations.some(n => t.includes(n));
+
+  // Scoring: need at least 30% of keywords OR 2 keywords, whichever is lower
+  const threshold = Math.max(1, Math.min(2, Math.ceil(words.length * 0.3)));
+  
+  // Bonus: longer answers with some keywords are more likely correct
+  const lengthBonus = val.length > 60 ? 1 : 0;
+  
+  const correct = (matchCount + lengthBonus) >= threshold;
+  return { correct, matchCount, total: words.length, matchedWords };
 }
 
 function answerDiagram(idx, isCorrect) {
@@ -3666,11 +3981,64 @@ function initSimulation(type) {
 let currentAnimId = null;
 
 function endSimulation() {
-  // Stop animation
   if (currentAnimId) cancelAnimationFrame(currentAnimId);
   currentAnimId = null;
-  // NEW FLOW: After simulation → go to tasks
-  renderTask();
+  simQIdx = 0;
+  simQCorrect = 0;
+  showSimQuestions();
+}
+
+// ============================================================
+// SIMULATION COMPREHENSION QUESTIONS
+// ============================================================
+let simQIdx = 0;
+let simQCorrect = 0;
+
+function showSimQuestions() {
+  const sq = currentLevelData.simQuestions || [];
+  if (sq.length === 0 || simQIdx >= sq.length) { renderTask(); return; }
+  const el = document.getElementById('screen-game');
+  showScreen('game');
+  if (teacherMode) updateTeacherPanel();
+  const q = sq[simQIdx];
+  el.innerHTML = `
+    <div class="card">
+      <div class="flex justify-between items-center">
+        <h3>🔬 Frage zur Simulation</h3>
+        <span class="text-xs text-muted">${simQIdx + 1} / ${sq.length}</span>
+      </div>
+      <div class="progress-bar mt-1"><div class="progress-fill" style="width:${(simQIdx/sq.length)*100}%"></div></div>
+    </div>
+    <div class="card">
+      ${avatarBubble(simQIdx === 0 ? 'Du hast die Simulation ausprobiert. Jetzt prüfe ich, ob du verstanden hast, was dort passiert ist!' : 'Nächste Frage zur Simulation:', 'think')}
+      <p class="fw-bold mt-2">${q.q}</p>
+      <div class="mt-1" id="simQOptions">
+        ${q.options.map((o, i) => `<button class="option-btn" onclick="answerSimQ(${i})">${o}</button>`).join('')}
+      </div>
+    </div>
+    <div id="simQFeedback"></div>
+    ${teacherMode ? `<div class="mt-1"><button class="btn btn-secondary btn-small" style="border-color:#e17055;color:#e17055;" onclick="simQIdx=${sq.length};showSimQuestions()">🎓 Überspringen →</button></div>` : ''}
+  `;
+}
+
+function answerSimQ(idx) {
+  const sq = currentLevelData.simQuestions;
+  const q = sq[simQIdx];
+  const correct = idx === q.correct;
+  const btns = document.querySelectorAll('.option-btn');
+  btns.forEach((b, i) => { b.disabled = true; if (i === q.correct) b.classList.add('correct'); if (i === idx && !correct) b.classList.add('incorrect'); });
+  if (correct) { simQCorrect++; addXP(q.xp || 10, 'Simulationsfrage'); }
+  S.answers.push({ level: currentLevelData.id, task: 'sim-' + simQIdx, question: q.q, correct, attempts: 1, hints: 0, xp: correct ? (q.xp || 10) : 0, explain: q.explain, timestamp: Date.now() });
+  saveState();
+  const fb = document.getElementById('simQFeedback');
+  fb.innerHTML = `
+    <div class="card" style="border-color:${correct ? 'var(--success)' : 'var(--danger)'};">
+      ${avatarBubble(correct ? getCorrectPhrase() : getIncorrectPhrase(), correct ? 'cheer' : 'sad')}
+      ${correct ? `<p class="text-accent fw-bold" style="text-align:center;">+${q.xp||10} XP ⚡</p>` : `<p class="text-sm fw-bold mt-1" style="color:var(--success);">✅ Richtig wäre: ${q.options[q.correct]}</p>`}
+      <div class="help-panel mt-1"><h4>📖 Erklärung</h4><p class="text-sm">${q.explain}</p></div>
+      <button class="btn btn-primary btn-block mt-2" onclick="simQIdx++;showSimQuestions()">Weiter →</button>
+    </div>
+  `;
 }
 
 // ============================================================
@@ -3730,8 +4098,10 @@ function finishLevel(lvlId) {
 
     <div class="card">
       <h3>📝 Lerntagebuch</h3>
-      <textarea id="journalEntry" placeholder="Was hast du in diesem Level gelernt? Was war schwierig?" class="mt-1"></textarea>
-      <button class="btn btn-secondary btn-small mt-1" onclick="saveJournalEntry(${lvlId})">Eintrag speichern</button>
+      <p class="text-sm text-muted">Schreibe kurz auf, was du gelernt hast. Das hilft dir, das Gelernte besser zu behalten! Dein Eintrag wird automatisch gespeichert, auch wenn du auf „Weiter" klickst.</p>
+      <textarea id="journalEntry" placeholder="Was hast du in diesem Level gelernt? Was war schwierig? Was hat dich überrascht?" class="mt-1"></textarea>
+      <button class="btn btn-secondary btn-small mt-1" onclick="saveJournalEntry(${lvlId})">💾 Jetzt speichern</button>
+      <p class="text-xs text-muted mt-1">💡 Tipp: Alle deine Einträge findest du jederzeit unter 📓 Tagebuch in der Navigation oben.</p>
     </div>
 
     <div class="card text-center">
