@@ -1346,6 +1346,8 @@ function showNotification(msg, cls = '') {
 // ============================================================
 // NAVIGATION
 // ============================================================
+let lastGameScreen = null; // track if a game is in progress
+
 function showScreen(name) {
   // Auto-save unsaved journal entry before leaving
   const journalInput = document.getElementById('journalEntry');
@@ -1356,26 +1358,58 @@ function showScreen(name) {
     checkBadges();
     showNotification('📝 Tagebucheintrag automatisch gespeichert!', '');
   }
-  // Also save any new journal entry from journal screen
   const newJEntry = document.getElementById('newJournalEntry');
   if (newJEntry && newJEntry.value.trim().length > 0) {
     S.journal.push({ date: new Date().toISOString(), level: null, text: newJEntry.value.trim() });
     saveState();
     checkBadges();
   }
-  // Save state before switching
   saveState();
+
+  // If leaving game screen, remember we have an active game
+  if (document.getElementById('screen-game').classList.contains('active') && name !== 'game' && currentLevelData) {
+    lastGameScreen = true;
+  }
+
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(`screen-${name}`).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.screen === name);
   });
+
+  // Only re-render non-game screens (game screen keeps its state in DOM)
   if (name === 'dashboard') renderDashboard();
   if (name === 'level') renderLevelSelect();
   if (name === 'formulas') renderFormulas();
   if (name === 'badges') renderBadges();
   if (name === 'journal') renderJournal();
   if (name === 'settings') renderSettings();
+
+  // Show/hide resume banner on non-game screens
+  updateResumeBanner(name);
+}
+
+function updateResumeBanner(currentScreen) {
+  let banner = document.getElementById('resumeBanner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'resumeBanner';
+    banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:140;padding:0.5rem 1rem;background:var(--bg-card);border-top:2px solid var(--accent);display:none;text-align:center;';
+    document.body.appendChild(banner);
+  }
+  if (lastGameScreen && currentLevelData && currentScreen !== 'game') {
+    banner.innerHTML = `<button class="btn btn-primary btn-small" onclick="resumeGame()" style="width:100%;max-width:400px;">↩️ Zurück zu Level ${currentLevelData.id}: ${currentLevelData.title}</button>`;
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function resumeGame() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-game').classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('resumeBanner').style.display = 'none';
 }
 
 function showModal(html) {
@@ -2859,7 +2893,7 @@ function evaluateTextAnswer(text, task) {
   const threshold = Math.max(1, Math.min(2, Math.ceil(words.length * 0.3)));
   
   // Bonus: longer answers with some keywords are more likely correct
-  const lengthBonus = val.length > 60 ? 1 : 0;
+  const lengthBonus = text.length > 60 ? 1 : 0;
   
   const correct = (matchCount + lengthBonus) >= threshold;
   return { correct, matchCount, total: words.length, matchedWords };
@@ -4045,6 +4079,7 @@ function answerSimQ(idx) {
 // FINISH LEVEL
 // ============================================================
 function finishLevel(lvlId) {
+  lastGameScreen = null; // Level is done, no resume needed
   const ls = S.levels[lvlId];
   const score = currentTasks.length > 0 ? Math.round((currentCorrect / currentTasks.length) * 100) : 0;
   ls.score = Math.max(ls.score, score);
