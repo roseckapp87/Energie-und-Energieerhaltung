@@ -2517,6 +2517,9 @@ let levelStartTime = 0;
 let matchState = {};
 
 function startLevel(lvlId) {
+  lastGameScreen = null; // Reset resume state for new level
+  const banner = document.getElementById('resumeBanner');
+  if (banner) banner.style.display = 'none';
   currentLevelData = LEVELS[lvlId];
   const ls = S.levels[lvlId];
 
@@ -4094,6 +4097,13 @@ function finishLevel(lvlId) {
       S.currentLevel = Math.max(S.currentLevel, lvlId + 1);
     }
     addXP(50, 'Level abgeschlossen!');
+  } else if (score >= 60) {
+    // Not completed but next level unlocked
+    if (lvlId < 10) {
+      S.levels[lvlId + 1].unlocked = true;
+      S.currentLevel = Math.max(S.currentLevel, lvlId + 1);
+    }
+    addXP(20, 'Level teilweise bestanden');
   }
 
   checkBadges();
