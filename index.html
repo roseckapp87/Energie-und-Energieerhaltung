@@ -1000,6 +1000,39 @@ body.font-large { --font-size-base: 18px; }
 ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
 
+/* LEVEL IN-GAME NAV */
+.level-nav {
+  display: flex;
+  gap: 0.25rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  padding: 0.3rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.level-nav-btn {
+  flex: 1;
+  min-width: 55px;
+  padding: 0.5rem 0.3rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: center;
+  touch-action: manipulation;
+  line-height: 1.3;
+}
+.level-nav-btn:hover { background: var(--bg-card); color: var(--text-primary); }
+.level-nav-btn.lnav-active { background: var(--accent); color: var(--bg-primary); }
+.level-nav-btn.lnav-done { color: var(--success); }
+.level-nav-btn.lnav-locked { opacity: 0.35; cursor: not-allowed; }
+
 /* TEACHER MODE */
 .teacher-fab {
   position: fixed;
@@ -1767,15 +1800,15 @@ const LEVELS = [
     tasks: {
       basis: [
         { type: 'choice', q: 'Von welchen Größen hängt die Lageenergie ab?', options: ['Nur von der Masse', 'Nur von der Höhe', 'Von Masse, Erdbeschleunigung und Höhe', 'Von der Geschwindigkeit'], correct: 2, xp: 10, explain: 'Die Lageenergie hängt von drei Größen ab: Masse (m), Erdbeschleunigung (g ≈ 10 m/s²) und Höhe (h). Formel: E_pot = m · g · h', hints: ['Die Formel hat drei Faktoren.', 'Masse und Höhe spielen eine Rolle.', 'Vergiss die Erdbeschleunigung nicht!'] },
-        { type: 'calc', q: 'Ein Aufzug hebt eine Person (70 kg) auf 30 m Höhe. Berechne die Lageenergie. (g = 10 m/s²)', answer: 21000, unit: 'J', tolerance: 100, xp: 20, explain: 'E_pot = m · g · h = 70 kg · 10 m/s² · 30 m = 21.000 J = 21 kJ', hints: ['Formel: E_pot = m · g · h', 'Setze ein: 70 · 10 · 30', 'Das Ergebnis ist 21.000 J'] },
-        { type: 'calc', q: 'Ein Paket (5 kg) wird auf ein Regal in 2 m Höhe gestellt. Wie groß ist die Lageenergie?', answer: 100, unit: 'J', tolerance: 5, xp: 15, explain: 'E_pot = m · g · h = 5 kg · 10 m/s² · 2 m = 100 J', hints: ['E_pot = m · g · h', '5 · 10 · 2 = ?', '100 Joule'] },
+        { type: 'calc', q: 'Ein Aufzug hebt eine Person (70 kg) auf 30 m Höhe. Berechne die Lageenergie. (g = 10 m/s²)', answer: 21000, unit: 'J', tolerance: 100, xp: 20, explain: 'E_pot = m · g · h = 70 kg · 10 m/s² · 30 m = 21.000 J = 21 kJ', hints: ['Formel: E_pot = m · g · h', 'Setze ein: 70 · 10 · 30', 'Multipliziere alle drei Faktoren miteinander'] },
+        { type: 'calc', q: 'Ein Paket (5 kg) wird auf ein Regal in 2 m Höhe gestellt. Wie groß ist die Lageenergie?', answer: 100, unit: 'J', tolerance: 5, xp: 15, explain: 'E_pot = m · g · h = 5 kg · 10 m/s² · 2 m = 100 J', hints: ['E_pot = m · g · h', '5 · 10 · 2 = ?', 'Kontrolliere: Stimmt die Einheit (Joule)?'] },
         { type: 'choice', q: 'Was passiert mit der Lageenergie, wenn du die Höhe verdoppelst (bei gleicher Masse)?', options: ['Sie bleibt gleich', 'Sie verdoppelt sich', 'Sie vervierfacht sich', 'Sie halbiert sich'], correct: 1, xp: 15, explain: 'Die Lageenergie ist direkt proportional zur Höhe. Verdoppelt man h, verdoppelt sich E_pot.', hints: ['Schau dir die Formel an: E = m·g·h', 'h kommt linear vor (nicht h²).', 'Proportional bedeutet: doppelte Höhe = ?'] },
         { type: 'choice', q: 'Welches Objekt hat bei 10 m Höhe mehr Lageenergie: ein 2 kg Stein oder ein 5 kg Rucksack?', options: ['Der Stein', 'Der Rucksack', 'Beide gleich', 'Kann man nicht sagen'], correct: 1, xp: 10, explain: 'Stein: E = 2·10·10 = 200 J. Rucksack: E = 5·10·10 = 500 J. Der Rucksack hat mehr Lageenergie, weil seine Masse größer ist.', hints: ['Berechne beide Werte.', 'E = m · g · h für beide.', 'Größere Masse → mehr Energie.'] },
-        { type: 'calc', q: 'Auf welche Höhe muss man einen 4 kg Gegenstand heben, damit er 200 J Lageenergie hat?', answer: 5, unit: 'm', tolerance: 0.5, xp: 20, explain: 'E_pot = m · g · h → h = E / (m · g) = 200 / (4 · 10) = 200 / 40 = 5 m', hints: ['Stelle die Formel nach h um.', 'h = E / (m · g)', '200 / (4 · 10) = ?'] },
+        { type: 'calc', q: 'Auf welche Höhe muss man einen 4 kg Gegenstand heben, damit er 200 J Lageenergie hat?', answer: 5, unit: 'm', tolerance: 0.5, xp: 20, explain: 'E_pot = m · g · h → h = E / (m · g) = 200 / (4 · 10) = 200 / 40 = 5 m', hints: ['Stelle die Formel nach h um.', 'Stelle die Formel E = m·g·h nach h um', '200 / (4 · 10) = ?'] },
       ],
       standard: [
         { type: 'calc', q: 'Ein Kran hebt einen Container (2.000 kg) auf 15 m Höhe. Berechne die Lageenergie in Kilojoule.', answer: 300, unit: 'kJ', tolerance: 5, xp: 25, explain: 'E_pot = 2000 · 10 · 15 = 300.000 J = 300 kJ', hints: ['E_pot = m · g · h', '2000 · 10 · 15 = 300.000 J', '1 kJ = 1000 J'] },
-        { type: 'slider', q: 'Stelle mit dem Schieberegler die Höhe ein, auf die man ein 5 kg Paket heben muss, damit es 350 J Lageenergie hat.', sliderLabel: 'Höhe', sliderMin: 1, sliderMax: 20, sliderStep: 0.5, unit: 'm', answer: 7, tolerance: 0.5, xp: 20, explain: 'h = E / (m·g) = 350 / (5·10) = 7 m', hints: ['Stelle die Formel nach h um.', 'h = E / (m · g)', '350 / 50 = 7 m'], showFormula: 'E_pot = m · g · h → h = E / (m · g)' },
+        { type: 'slider', q: 'Stelle mit dem Schieberegler die Höhe ein, auf die man ein 5 kg Paket heben muss, damit es 350 J Lageenergie hat.', sliderLabel: 'Höhe', sliderMin: 1, sliderMax: 20, sliderStep: 0.5, unit: 'm', answer: 7, tolerance: 0.5, xp: 20, explain: 'h = E / (m·g) = 350 / (5·10) = 7 m', hints: ['Stelle die Formel nach h um.', 'Stelle die Formel E = m·g·h nach h um', '350 / 50 = 7 m'], showFormula: 'E_pot = m · g · h → h = E / (m · g)' },
         { type: 'predict', q: 'Stell dir vor: Du trägst deinen 8 kg schweren Rucksack eine Treppe mit 20 Stufen hoch. Jede Stufe ist 18 cm hoch. Wie viel Lageenergie gewinnt der Rucksack? Schätze zuerst, dann berechne!', correctKey: 'berechnung', acceptWords: ['288', '290', 'lageenergie', 'höhe', '3.6', '3,6'], xp: 25, explain: 'Gesamthöhe: 20 · 0,18 m = 3,6 m. E_pot = 8 · 10 · 3,6 = 288 J', hints: ['Berechne zuerst die Gesamthöhe der Treppe.', '20 Stufen · 0,18 m = ?', 'Dann E = m · g · h mit der Gesamthöhe.'] },
         { type: 'error', q: 'Finde den Fehler: „Ein 3 kg Ball auf 4 m Höhe hat eine Lageenergie von 12 J."', correctKey: 'rechenfehler', acceptWords: ['120', 'falsch', 'vergessen', '10', 'erdbeschleunigung', 'g'], xp: 20, explain: 'Fehler: g wurde vergessen! Richtig: E = 3 · 10 · 4 = 120 J (nicht 3 · 4 = 12 J).', hints: ['Prüfe die Formel: E = m · g · h', 'Wurde g = 10 m/s² berücksichtigt?', '3 · 10 · 4 = ?'] },
       ],
@@ -1828,7 +1861,7 @@ const LEVELS = [
         { type: 'predict', q: 'Ein Skater fährt eine Halfpipe herunter. Durch Reibung erreicht er auf der anderen Seite nicht ganz die gleiche Höhe. Wohin ist die „fehlende" Energie gegangen?', correctKey: 'waerme', acceptWords: ['wärme', 'reibung', 'warm', 'temperatur', 'verlust', 'umgewandelt'], xp: 20, explain: 'Die „fehlende" Energie wurde durch Reibung in Wärme umgewandelt. Die Räder, die Rampe und die Luft werden minimal wärmer. Die Gesamtenergie ist aber erhalten!', hints: ['Reibung wandelt mechanische Energie um.', 'Was entsteht bei Reibung?', 'Wärme!'] },
       ],
       standard: [
-        { type: 'calc', q: 'Ein Skater (60 kg) steht auf einer 4 m hohen Rampe. Berechne seine Geschwindigkeit am tiefsten Punkt (ohne Reibung).', answer: 8.9, unit: 'm/s', tolerance: 0.5, xp: 25, explain: 'E_pot = E_kin → m·g·h = ½·m·v² → v = √(2·g·h) = √(2·10·4) = √80 ≈ 8,9 m/s', hints: ['Setze Lageenergie = Kinetische Energie', 'Die Masse kürzt sich heraus!', 'v = √(2·g·h)'] },
+        { type: 'calc', q: 'Ein Skater (60 kg) steht auf einer 4 m hohen Rampe. Berechne seine Geschwindigkeit am tiefsten Punkt (ohne Reibung).', answer: 8.9, unit: 'm/s', tolerance: 0.5, xp: 25, explain: 'E_pot = E_kin → m·g·h = ½·m·v² → v = √(2·g·h) = √(2·10·4) = √80 ≈ 8,9 m/s', hints: ['Setze Lageenergie = Kinetische Energie', 'Die Masse kürzt sich heraus!', 'Nutze die Formel: v = √(2 · g · h)'] },
         { type: 'diagram', q: 'Welches Diagramm zeigt korrekt den Verlauf von Lage- und kinetischer Energie beim Herunterrollen einer Rampe?', options: [
           { label: 'Lageenergie sinkt, kinetische steigt, Summe konstant', correct: true },
           { label: 'Beide steigen gleichzeitig', correct: false },
@@ -1879,7 +1912,7 @@ const LEVELS = [
       basis: [
         { type: 'choice', q: 'An welchem Punkt einer Achterbahn ist die Geschwindigkeit am höchsten?', options: ['Am höchsten Punkt', 'Am tiefsten Punkt', 'In einer Kurve', 'Am Start'], correct: 1, xp: 10, explain: 'Am tiefsten Punkt ist die meiste Lageenergie in kinetische Energie umgewandelt. Hier ist v maximal.', hints: ['Wo ist die Lageenergie am kleinsten?', 'Am tiefsten Punkt.', 'Dort ist die kinetische Energie maximal.'] },
         { type: 'choice', q: 'Warum ist der erste Hügel einer Achterbahn immer der höchste?', options: ['Weil er am schönsten aussieht', 'Weil die Achterbahn sonst rückwärts fährt', 'Weil kein nachfolgender Hügel höher sein kann als die Starthöhe (Energieerhaltung)', 'Weil die Geschwindigkeit begrenzt ist'], correct: 2, xp: 15, explain: 'Energieerhaltung: Die Achterbahn kann nie höher kommen als der Startpunkt (plus eventuelle Reibungsverluste machen es noch weniger). Deshalb muss der erste Hügel der höchste sein.', hints: ['Energieerhaltung!', 'Ohne Motor kann die Bahn nicht höher fahren als der Start.', 'Reibung nimmt sogar noch Energie weg.'] },
-        { type: 'calc', q: 'Eine Achterbahn startet aus 40 m Höhe. Wie schnell ist sie am tiefsten Punkt? (ohne Reibung, g = 10 m/s²)', answer: 28.3, unit: 'm/s', tolerance: 1, xp: 20, explain: 'v = √(2·g·h) = √(2·10·40) = √800 ≈ 28,3 m/s ≈ 102 km/h', hints: ['v = √(2·g·h)', '2·10·40 = 800', '√800 ≈ 28,3'] },
+        { type: 'calc', q: 'Eine Achterbahn startet aus 40 m Höhe. Wie schnell ist sie am tiefsten Punkt? (ohne Reibung, g = 10 m/s²)', answer: 28.3, unit: 'm/s', tolerance: 1, xp: 20, explain: 'v = √(2·g·h) = √(2·10·40) = √800 ≈ 28,3 m/s ≈ 102 km/h', hints: ['Nutze die Formel: v = √(2 · g · h)', 'Berechne zuerst 2 · g · h, dann die Wurzel', 'Ziehe die Wurzel aus dem Ergebnis'] },
         { type: 'choice', q: 'Eine Achterbahn fährt durch ein Tal und dann auf einen zweiten Hügel. Oben auf dem zweiten Hügel ist die Geschwindigkeit…', options: ['Null', 'Maximal', 'Kleiner als im Tal', 'Größer als im Tal'], correct: 2, xp: 15, explain: 'Auf dem zweiten Hügel wurde ein Teil der kinetischen Energie wieder in Lageenergie umgewandelt. Die Geschwindigkeit ist daher kleiner als im Tal.', hints: ['Bergauf: kinetisch → Lageenergie', 'Die Geschwindigkeit nimmt ab.', 'Kleiner als im Tal'] },
         { type: 'calc', q: 'Eine Achterbahn (500 kg) hat am höchsten Punkt (25 m) eine Geschwindigkeit von 5 m/s. Berechne die Gesamtenergie.', answer: 131250, unit: 'J', tolerance: 500, xp: 20, explain: 'E_ges = E_pot + E_kin = m·g·h + ½·m·v² = 500·10·25 + ½·500·25 = 125.000 + 6.250 = 131.250 J', hints: ['E_ges = E_pot + E_kin', 'E_pot = 500·10·25 = 125.000 J', 'E_kin = ½·500·5² = 6.250 J'] },
         { type: 'choice', q: 'Die Gesamtenergie der Achterbahn am tiefsten Punkt ist im Vergleich zum höchsten Punkt… (ohne Reibung)', options: ['Größer', 'Kleiner', 'Gleich', 'Null'], correct: 2, xp: 10, explain: 'Energieerhaltung! Ohne Reibung bleibt die Gesamtenergie an jedem Punkt gleich.', hints: ['Energieerhaltungssatz!', 'Ohne Reibung: E_ges = konstant', 'Gleich!'] },
@@ -1944,7 +1977,7 @@ const LEVELS = [
         { type: 'choice', q: 'Ein Apfel fällt vom Baum. Kurz vor dem Aufprall ist seine…', options: ['Lageenergie maximal', 'Kinetische Energie maximal', 'Gesamtenergie null', 'Geschwindigkeit null'], correct: 1, xp: 10, explain: 'Kurz vor dem Aufprall ist fast alle Lageenergie in kinetische Energie umgewandelt. Die Geschwindigkeit und damit die kinetische Energie ist maximal.', hints: ['Der Apfel ist fast am Boden: Höhe ≈ 0', 'Er ist am schnellsten kurz vor dem Aufprall.', 'Maximale Geschwindigkeit → maximale E_kin'] },
       ],
       standard: [
-        { type: 'calc', q: 'Ein Stein fällt aus 20 m Höhe. Wie schnell ist er kurz vor dem Aufprall?', answer: 20, unit: 'm/s', tolerance: 1, xp: 20, explain: 'v = √(2·g·h) = √(2·10·20) = √400 = 20 m/s', hints: ['Energieerhaltung: E_pot = E_kin', 'v = √(2·g·h)', '√400 = 20'] },
+        { type: 'calc', q: 'Ein Stein fällt aus 20 m Höhe. Wie schnell ist er kurz vor dem Aufprall?', answer: 20, unit: 'm/s', tolerance: 1, xp: 20, explain: 'v = √(2·g·h) = √(2·10·20) = √400 = 20 m/s', hints: ['Energieerhaltung: E_pot = E_kin', 'Nutze die Formel: v = √(2 · g · h)', 'Ziehe die Wurzel – welche Zahl ergibt sich?'] },
         { type: 'calc', q: 'Welche Masse hat ein Objekt, das bei 10 m/s eine kinetische Energie von 250 J hat?', answer: 5, unit: 'kg', tolerance: 0.5, xp: 20, explain: 'm = 2·E/(v²) = 2·250/100 = 5 kg', hints: ['Stelle die Formel nach m um.', 'm = 2·E_kin / v²', '2·250 / 100'] },
         { type: 'error', q: 'Finde den Fehler: „Ein 2 kg Ball mit 6 m/s hat eine kinetische Energie von E = 2 · 6² = 72 J"', correctKey: 'halb', acceptWords: ['halb', '½', '0,5', 'hälfte', '36', 'fehlt'], xp: 20, explain: 'Der Faktor ½ wurde vergessen! Richtig: E = ½ · 2 · 36 = 36 J, nicht 72 J.', hints: ['Prüfe die Formel genau.', 'E_kin = ½ · m · v², nicht m · v²', 'Der Faktor ½ fehlt!'] },
       ],
@@ -2040,12 +2073,12 @@ const LEVELS = [
         { type: 'choice', q: 'Warum wird der Bungee-Springer bei jeder Schwingung ein bisschen weniger hoch?', options: ['Das Seil wird kürzer', 'Energie wird durch Luftwiderstand und Seildämpfung in Wärme umgewandelt', 'Die Schwerkraft wird stärker', 'Der Springer wird leichter'], correct: 1, xp: 15, explain: 'Bei jeder Schwingung geht etwas Energie durch Luftwiderstand und innere Reibung im Seil verloren (wird in Wärme umgewandelt). Daher werden die Schwingungen kleiner.', hints: ['Reibung und Luftwiderstand', 'Mechanische Energie → Wärme', 'Weniger Energie → geringere Höhe'] },
       ],
       standard: [
-        { type: 'calc', q: 'Ein Bungee-Springer (80 kg) springt aus 40 m Höhe. Das Seil (D = 100 N/m) ist 20 m lang (beginnt sich nach 20 m zu dehnen). Wie schnell ist er, wenn das Seil anfängt sich zu spannen?', answer: 20, unit: 'm/s', tolerance: 1, xp: 25, explain: '20 m freier Fall: v = √(2·10·20) = √400 = 20 m/s', hints: ['Erst 20 m freier Fall', 'v = √(2·g·h)', '√400 = 20'] },
+        { type: 'calc', q: 'Ein Bungee-Springer (80 kg) springt aus 40 m Höhe. Das Seil (D = 100 N/m) ist 20 m lang (beginnt sich nach 20 m zu dehnen). Wie schnell ist er, wenn das Seil anfängt sich zu spannen?', answer: 20, unit: 'm/s', tolerance: 1, xp: 25, explain: '20 m freier Fall: v = √(2·10·20) = √400 = 20 m/s', hints: ['Erst 20 m freier Fall', 'Nutze die Formel: v = √(2 · g · h)', 'Ziehe die Wurzel – welche Zahl ergibt sich?'] },
         { type: 'calc', q: 'Ein Bungee-Springer (70 kg) hat am tiefsten Punkt 50 m unter der Brücke alle Energie im Seil gespeichert. Wie groß ist die Spannenergie? (E_pot Referenz: Brücke)', answer: 35000, unit: 'J', tolerance: 500, xp: 25, explain: 'Am tiefsten Punkt: v = 0, also E_kin = 0. Die gesamte anfängliche Lageenergie ist im Seil: E_sp = m·g·h = 70·10·50 = 35.000 J', hints: ['Am tiefsten Punkt: v = 0', 'Gesamte Lageenergie → Spannenergie', 'E = m·g·h = 70·10·50'] },
       ],
       expert: [
         { type: 'explain', q: 'Ein Bungee-Seil hat eine Länge von 25 m und eine Federkonstante von D = 80 N/m. Erkläre, warum ein leichterer Springer bei gleicher Brückenhöhe nicht so tief fällt wie ein schwerer.', correctKey: 'masse', acceptWords: ['masse', 'lageenergie', 'leichter', 'weniger', 'energie', 'dehnung', 'spannenergie'], xp: 35, explain: 'Ein leichterer Springer hat bei gleicher Höhe weniger Lageenergie (E = m·g·h). Weniger Energie muss im Seil gespeichert werden. Da E_sp = ½·D·s², braucht weniger Energie eine geringere Dehnung s.', hints: ['Weniger Masse = weniger Lageenergie', 'Weniger Energie → weniger Seildehnung', 'E_sp = ½·D·s² → geringeres s'] },
-        { type: 'calc', q: 'Ein 75 kg Springer springt von 45 m. Das Seil (D = 120 N/m, Länge 20 m) dehnt sich. Berechne die maximale Dehnung des Seils.', answer: 10.6, unit: 'm', tolerance: 0.5, xp: 40, explain: 'Am tiefsten Punkt: m·g·(20+s) = ½·D·s² → 750·(20+s) = 60·s² → 60s² - 750s - 15000 = 0 → s² - 12,5s - 250 = 0 → s = (12,5 + √(156,25+1000))/2 = (12,5+34)/2 ≈ 23,3... Nein, let me recalculate. 75·10·(20+s) = ½·120·s² → 750(20+s) = 60s² → 15000 + 750s = 60s² → 60s² - 750s - 15000 = 0 → s² - 12.5s - 250 = 0 → s = (12.5 + √(156.25 + 1000))/2 = (12.5 + √1156.25)/2 ≈ (12.5 + 34.0)/2 ≈ 23.25. Hmm – I need to fix this. Actually the fall height is 20m (free) + s (stretch). So the answer should be around 23.25 m but that is more than 45-20=25m available. Let me set answer properly.', answer: 23.2, unit: 'm', tolerance: 2, hints: ['Energieerhaltung aufstellen', 'Fall: 20 m frei + s Dehnung', 'Quadratische Gleichung lösen'] },
+        { type: 'calc', q: 'Ein 75 kg Springer springt von 45 m. Das Seil (D = 120 N/m, Länge 20 m) dehnt sich. Berechne die maximale Dehnung des Seils.', answer: 23.3, unit: 'm', tolerance: 2, xp: 40, explain: 'Energieerhaltung: m·g·(20+s) = ½·D·s². Einsetzen: 750·(20+s) = 60·s² → 60s² - 750s - 15000 = 0 → s = (12,5 + √1156,25) / 2 ≈ 23,3 m.', hints: ['Energieerhaltung aufstellen', 'Fallhöhe = 20 m frei + s Dehnung', 'Quadratische Gleichung lösen'] },
       ]
     },
     simQuestions: [
@@ -2608,6 +2641,38 @@ function submitAssessment(phase, lvlId, value) {
 // ============================================================
 // THEORY PAGES (Erklärtexte vor der Simulation)
 // ============================================================
+
+function levelNavHTML(activeTab) {
+  // activeTab: 'theory' | 'sim' | 'simq' | 'tasks'
+  const lvl = currentLevelData;
+  if (!lvl) return '';
+  const hasTheory = (lvl.theory || []).length > 0;
+  const hasSimQ = (lvl.simQuestions || []).length > 0;
+  const tasksDone = currentTaskIdx > 0 || currentCorrect > 0;
+
+  function btn(tab, icon, label, extra) {
+    const active = activeTab === tab ? 'lnav-active' : '';
+    const locked = extra === 'locked' ? 'lnav-locked' : '';
+    const done = extra === 'done' ? 'lnav-done' : '';
+    const onclick = extra === 'locked' ? '' : `onclick="levelNavGo('${tab}')"`;
+    return `<button class="level-nav-btn ${active} ${locked} ${done}" ${onclick}>${icon}<br>${label}</button>`;
+  }
+
+  return `<div class="level-nav">
+    ${hasTheory ? btn('theory', '📖', 'Theorie', '') : ''}
+    ${btn('sim', '🔬', 'Simulation', '')}
+    ${hasSimQ ? btn('simq', '❓', 'Sim-Fragen', '') : ''}
+    ${btn('tasks', '📝', 'Aufgaben (' + currentTaskIdx + '/' + currentTasks.length + ')', '')}
+  </div>`;
+}
+
+function levelNavGo(tab) {
+  if (currentAnimId) { cancelAnimationFrame(currentAnimId); currentAnimId = null; }
+  if (tab === 'theory') showTheory();
+  else if (tab === 'sim') showSimulation();
+  else if (tab === 'simq') { simQIdx = 0; showSimQuestions(); }
+  else if (tab === 'tasks') renderTask();
+}
 function showTheory() {
   const el = document.getElementById('screen-game');
   showScreen('game');
@@ -2626,11 +2691,12 @@ function showTheory() {
   `).join('');
 
   el.innerHTML = `
+    ${levelNavHTML('theory')}
     <div class="card card-glow">
       <h2>${lvl.icon} Level ${lvl.id}: ${lvl.title}</h2>
       <p class="text-sm text-muted">Lies dir die Erklärung durch, bevor du zur Simulation und den Aufgaben kommst.</p>
     </div>
-    ${avatarBubble(lvl.theoryIntro || 'Bevor wir loslegen, erkläre ich dir die wichtigsten Grundlagen zu diesem Thema. Lies aufmerksam!', 'tip') ? `<div class="card">${avatarBubble(lvl.theoryIntro || 'Bevor wir loslegen, erkläre ich dir die wichtigsten Grundlagen. Lies aufmerksam!', 'tip')}</div>` : ''}
+    ${avatarBubble(lvl.theoryIntro || 'Bevor wir loslegen, erkläre ich dir die wichtigsten Grundlagen. Lies aufmerksam!', 'tip') ? `<div class="card">${avatarBubble(lvl.theoryIntro || 'Bevor wir loslegen, erkläre ich dir die wichtigsten Grundlagen. Lies aufmerksam!', 'tip')}</div>` : ''}
     ${theoryHTML}
     <button class="btn btn-primary btn-block mt-2" onclick="showSimulation()">Verstanden – zur Simulation! 🔬</button>
     ${teacherMode ? `<button class="btn btn-secondary btn-block mt-1" style="border-color:#e17055;color:#e17055;" onclick="teacherSkipToFinish()">🎓 Überspringen →</button>` : ''}
@@ -2673,7 +2739,7 @@ function renderTask() {
     taskHTML = `
       <p class="fw-bold mt-2">${task.q}</p>
       <div class="flex gap-sm items-center mt-1">
-        <input type="number" id="calcInput" placeholder="Dein Ergebnis" step="any" style="flex:1;">
+        <input type="text" inputmode="decimal" id="calcInput" placeholder="Dein Ergebnis" style="flex:1;">
         <span class="fw-bold text-accent">${task.unit}</span>
       </div>
       <button class="btn btn-primary mt-1" onclick="answerCalc()">Prüfen ✓</button>
@@ -2770,6 +2836,7 @@ function renderTask() {
   }
 
   el.innerHTML = `
+    ${levelNavHTML('tasks')}
     <div class="card">
       <div class="flex justify-between items-center">
         <div class="flex items-center gap-sm">
@@ -2830,13 +2897,42 @@ function answerChoice(idx, correct) {
 
 function answerCalc() {
   const input = document.getElementById('calcInput');
-  const val = parseFloat(input.value);
+  let raw = input.value.trim();
+  if (!raw) { showNotification('Bitte gib eine Zahl ein.', ''); return; }
+  
+  // Normalize German number formats
+  raw = raw.replace(/\s/g, ''); // "21 000" → "21000"
+  
+  if (raw.includes(',') && raw.includes('.')) {
+    // "21.000,5" → "21000.5" (German: dot=thousands, comma=decimal)
+    raw = raw.replace(/\./g, '').replace(',', '.');
+  } else if (raw.includes(',')) {
+    // "8,9" → "8.9" OR "21,000" check context
+    const parts = raw.split(',');
+    if (parts[1] && parts[1].length === 3 && !parts[1].includes(',')) {
+      raw = raw.replace(',', ''); // "21,000" → "21000"
+    } else {
+      raw = raw.replace(',', '.'); // "8,9" → "8.9"
+    }
+  } else if ((raw.match(/\./g) || []).length >= 2) {
+    // "21.000.000" → multiple dots = all thousands separators
+    raw = raw.replace(/\./g, '');
+  } else if (raw.includes('.')) {
+    // Single dot: "21.000" vs "8.9"
+    const afterDot = raw.split('.')[1];
+    if (afterDot && afterDot.length === 3) {
+      raw = raw.replace('.', ''); // "21.000" → "21000"
+    }
+    // else keep as decimal: "8.9"
+  }
+  
+  const val = parseFloat(raw);
   const task = currentTasks[currentTaskIdx];
   const taskKey = `${currentLevelData.id}-${currentTaskIdx}`;
   S.levels[currentLevelData.id].taskAttempts[taskKey] = (S.levels[currentLevelData.id].taskAttempts[taskKey] || 0) + 1;
 
   if (isNaN(val)) {
-    showNotification('Bitte gib eine Zahl ein.', '');
+    showNotification('Bitte gib eine gültige Zahl ein.', '');
     return;
   }
 
@@ -3052,11 +3148,12 @@ function answerFillin() {
 }
 
 function handleCorrect(task, taskKey) {
-  currentCorrect++;
+  const alreadyCorrect = S.levels[currentLevelData.id].taskResults[taskKey] === true;
+  if (!alreadyCorrect) currentCorrect++; // only count once per task
   const attempts = S.levels[currentLevelData.id].taskAttempts[taskKey] || 1;
   const hints = S.levels[currentLevelData.id].hintsUsed[taskKey] || 0;
-  const xp = getXPForAttempt(task.xp, attempts, hints);
-  addXP(xp, 'Richtige Antwort');
+  const xp = alreadyCorrect ? 0 : getXPForAttempt(task.xp, attempts, hints);
+  if (!alreadyCorrect) addXP(xp, 'Richtige Antwort');
   S.levels[currentLevelData.id].taskResults[taskKey] = true;
 
   S.answers.push({
@@ -3076,6 +3173,14 @@ function handleCorrect(task, taskKey) {
 
 function handleIncorrect(task, taskKey) {
   const attempts = S.levels[currentLevelData.id].taskAttempts[taskKey] || 1;
+  
+  // First wrong attempt: give one retry (no solution yet)
+  if (attempts === 1) {
+    showFeedback(false, task, 0, false); // false = not final, show retry
+    return;
+  }
+  
+  // Second wrong attempt: show solution
   S.levels[currentLevelData.id].taskResults[taskKey] = false;
   S.answers.push({
     level: currentLevelData.id,
@@ -3088,47 +3193,94 @@ function handleIncorrect(task, taskKey) {
     explain: task.explain,
     timestamp: Date.now()
   });
-  showFeedback(false, task, 0);
+  showFeedback(false, task, 0, true); // true = final, show solution
 }
 
-function showFeedback(correct, task, xp) {
+function showFeedback(correct, task, xp, final = true) {
   const area = document.getElementById('feedbackArea');
   
-  // Build correct answer display for incorrect answers
-  let correctAnswerHTML = '';
-  if (!correct) {
+  // Retry screen (first wrong attempt)
+  if (!correct && !final) {
+    area.innerHTML = `
+      <div class="card" style="border-color:var(--warning);">
+        ${avatarBubble(getIncorrectPhrase(), 'think')}
+        <p class="text-sm text-warning fw-bold mt-1">Das war leider nicht richtig. Du hast noch einen Versuch!</p>
+        <button class="btn btn-secondary btn-block mt-2" onclick="retryTask()">🔄 Nochmal versuchen</button>
+      </div>
+    `;
+    document.getElementById('hintArea').innerHTML = '';
+    return;
+  }
+
+  // Build detailed solution display for final wrong answer
+  let solutionHTML = '';
+  if (!correct && final) {
+    let answerBlock = '';
+    let stepsBlock = '';
+
     if (task.type === 'choice') {
-      correctAnswerHTML = `<p class="text-sm fw-bold mt-1" style="color:var(--success);">✅ Richtige Antwort: ${task.options[task.correct]}</p>`;
+      answerBlock = `<div class="formula" style="border-color:var(--success);background:rgba(0,184,148,0.08);">✅ Richtige Antwort: <strong>${task.options[task.correct]}</strong></div>`;
     } else if (task.type === 'calc' || task.type === 'slider') {
-      correctAnswerHTML = `<p class="text-sm fw-bold mt-1" style="color:var(--success);">✅ Richtige Antwort: ${task.answer} ${task.unit}</p>`;
+      answerBlock = `<div class="formula" style="border-color:var(--success);background:rgba(0,184,148,0.08);">✅ Richtige Antwort: <strong>${task.answer} ${task.unit}</strong></div>`;
     } else if (task.type === 'diagram') {
       const ci = task.options.findIndex(o => o.correct);
-      correctAnswerHTML = `<p class="text-sm fw-bold mt-1" style="color:var(--success);">✅ Richtig: ${task.options[ci]?.label || ''}</p>`;
+      answerBlock = `<div class="formula" style="border-color:var(--success);background:rgba(0,184,148,0.08);">✅ Richtige Antwort: <strong>${task.options[ci]?.label || ''}</strong></div>`;
     } else if (task.type === 'sort') {
-      correctAnswerHTML = `<p class="text-sm fw-bold mt-1" style="color:var(--success);">✅ Richtige Reihenfolge:</p>` + task.items.map((it,i) => `<p class="text-xs" style="color:var(--success);">${i+1}. ${it}</p>`).join('');
+      answerBlock = `<div class="formula" style="border-color:var(--success);background:rgba(0,184,148,0.08);">✅ Richtige Reihenfolge:<br>${task.items.map((it,i) => `<strong>${i+1}.</strong> ${it}`).join('<br>')}</div>`;
     } else if (task.type === 'fillin') {
-      correctAnswerHTML = `<p class="text-sm fw-bold mt-1" style="color:var(--success);">✅ Richtige Antworten:</p>` + task.blanks.map((b,i) => `<p class="text-xs" style="color:var(--success);">Lücke ${i+1}: ${b.correct}</p>`).join('');
+      answerBlock = `<div class="formula" style="border-color:var(--success);background:rgba(0,184,148,0.08);">✅ Richtige Antworten:<br>${task.blanks.map((b,i) => `<strong>Lücke ${i+1}:</strong> ${b.correct}`).join('<br>')}</div>`;
     } else if (task.type === 'match') {
-      correctAnswerHTML = `<p class="text-sm fw-bold mt-1" style="color:var(--success);">✅ Richtige Zuordnung:</p>` + task.pairs.map(p => `<p class="text-xs" style="color:var(--success);">${p[0]} → ${p[1]}</p>`).join('');
+      answerBlock = `<div class="formula" style="border-color:var(--success);background:rgba(0,184,148,0.08);">✅ Richtige Zuordnung:<br>${task.pairs.map(p => `<strong>${p[0]}</strong> → ${p[1]}`).join('<br>')}</div>`;
+    } else if (task.type === 'predict' || task.type === 'explain' || task.type === 'error') {
+      // For text answers show keywords that were expected
+      if (task.acceptWords) {
+        answerBlock = `<div class="formula" style="border-color:var(--success);background:rgba(0,184,148,0.08);">✅ Wichtige Begriffe: <strong>${task.acceptWords.slice(0,6).join(', ')}</strong></div>`;
+      }
     }
+
+    // Extract hints as step-by-step solution
+    if (task.hints && task.hints.length > 0) {
+      stepsBlock = `
+        <div style="margin-top:0.75rem;">
+          <p class="text-xs fw-bold text-muted" style="text-transform:uppercase;letter-spacing:0.05em;">Lösungsweg Schritt für Schritt:</p>
+          ${task.hints.map((h, i) => `
+            <div style="display:flex;gap:0.5rem;margin-top:0.4rem;align-items:flex-start;">
+              <span style="width:22px;height:22px;min-width:22px;border-radius:50%;background:var(--accent);color:var(--bg-primary);display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;">${i+1}</span>
+              <p class="text-sm">${h}</p>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    solutionHTML = `
+      <div style="margin-top:0.5rem;">
+        ${answerBlock}
+        ${stepsBlock}
+        <div style="margin-top:0.75rem;padding:0.75rem;background:rgba(78,205,196,0.05);border-radius:var(--radius);border:1px solid var(--border);">
+          <p class="text-xs fw-bold text-muted" style="text-transform:uppercase;letter-spacing:0.05em;">Ausführliche Erklärung:</p>
+          <p class="text-sm mt-1">${task.explain}</p>
+        </div>
+      </div>
+    `;
   }
 
   area.innerHTML = `
     <div class="card" style="border-color: ${correct ? 'var(--success)' : 'var(--danger)'};">
-      ${avatarBubble(
-        correct ? getCorrectPhrase() : getIncorrectPhrase(),
-        correct ? 'cheer' : 'sad'
-      )}
+      ${avatarBubble(correct ? getCorrectPhrase() : getIncorrectPhrase(), correct ? 'cheer' : 'sad')}
       ${correct ? `<p class="text-accent fw-bold mt-1" style="text-align:center;">+${xp} XP ⚡</p>` : ''}
-      ${correctAnswerHTML}
-      <div class="help-panel mt-1">
-        <h4>📖 ${correct ? 'Erklärung' : 'Die richtige Lösung'}</h4>
-        <p class="text-sm">${task.explain}</p>
-      </div>
+      ${correct ? `<div class="help-panel mt-1"><h4>📖 Erklärung</h4><p class="text-sm">${task.explain}</p></div>` : solutionHTML}
       <button class="btn btn-primary btn-block mt-2" onclick="nextTask()">Weiter →</button>
     </div>
   `;
   document.getElementById('hintArea').innerHTML = '';
+}
+
+function retryTask() {
+  const area = document.getElementById('feedbackArea');
+  area.innerHTML = '';
+  // Re-render just the task card and hint area, keep nav
+  renderTask();
 }
 
 function nextTask() {
@@ -3192,6 +3344,7 @@ function showSimulation() {
   if (teacherMode) updateTeacherPanel();
 
   el.innerHTML = `
+    ${levelNavHTML('sim')}
     <div class="card card-glow">
       <h2>🔬 ${sim.title}</h2>
       <p class="text-sm text-muted">${sim.desc}</p>
@@ -4039,6 +4192,7 @@ function showSimQuestions() {
   if (teacherMode) updateTeacherPanel();
   const q = sq[simQIdx];
   el.innerHTML = `
+    ${levelNavHTML('simq')}
     <div class="card">
       <div class="flex justify-between items-center">
         <h3>🔬 Frage zur Simulation</h3>
@@ -4064,8 +4218,10 @@ function answerSimQ(idx) {
   const correct = idx === q.correct;
   const btns = document.querySelectorAll('.option-btn');
   btns.forEach((b, i) => { b.disabled = true; if (i === q.correct) b.classList.add('correct'); if (i === idx && !correct) b.classList.add('incorrect'); });
-  if (correct) { simQCorrect++; addXP(q.xp || 10, 'Simulationsfrage'); }
-  S.answers.push({ level: currentLevelData.id, task: 'sim-' + simQIdx, question: q.q, correct, attempts: 1, hints: 0, xp: correct ? (q.xp || 10) : 0, explain: q.explain, timestamp: Date.now() });
+  const simKey = `sim-${simQIdx}`;
+  const alreadyDone = S.answers.some(a => a.level === currentLevelData.id && a.task === simKey && a.correct);
+  if (correct && !alreadyDone) { simQCorrect++; addXP(q.xp || 10, 'Simulationsfrage'); }
+  if (!alreadyDone) S.answers.push({ level: currentLevelData.id, task: simKey, question: q.q, correct, attempts: 1, hints: 0, xp: correct ? (q.xp || 10) : 0, explain: q.explain, timestamp: Date.now() });
   saveState();
   const fb = document.getElementById('simQFeedback');
   fb.innerHTML = `
@@ -4084,26 +4240,26 @@ function answerSimQ(idx) {
 function finishLevel(lvlId) {
   lastGameScreen = null; // Level is done, no resume needed
   const ls = S.levels[lvlId];
-  const score = currentTasks.length > 0 ? Math.round((currentCorrect / currentTasks.length) * 100) : 0;
+  const score = currentTasks.length > 0 ? Math.min(100, Math.round((currentCorrect / currentTasks.length) * 100)) : 0;
   ls.score = Math.max(ls.score, score);
   ls.timeSpent = Date.now() - levelStartTime;
 
   const el = document.getElementById('screen-game');
 
+  const wasAlreadyCompleted = ls.completed;
   if (score >= 80) {
     ls.completed = true;
     if (lvlId < 10) {
       S.levels[lvlId + 1].unlocked = true;
       S.currentLevel = Math.max(S.currentLevel, lvlId + 1);
     }
-    addXP(50, 'Level abgeschlossen!');
+    if (!wasAlreadyCompleted) addXP(50, 'Level abgeschlossen!');
   } else if (score >= 60) {
-    // Not completed but next level unlocked
     if (lvlId < 10) {
       S.levels[lvlId + 1].unlocked = true;
       S.currentLevel = Math.max(S.currentLevel, lvlId + 1);
     }
-    addXP(20, 'Level teilweise bestanden');
+    if (!wasAlreadyCompleted) addXP(20, 'Level teilweise bestanden');
   }
 
   checkBadges();
@@ -4143,20 +4299,47 @@ function finishLevel(lvlId) {
 
     <div class="card">
       <h3>📝 Lerntagebuch</h3>
-      <p class="text-sm text-muted">Schreibe kurz auf, was du gelernt hast. Das hilft dir, das Gelernte besser zu behalten! Dein Eintrag wird automatisch gespeichert, auch wenn du auf „Weiter" klickst.</p>
-      <textarea id="journalEntry" placeholder="Was hast du in diesem Level gelernt? Was war schwierig? Was hat dich überrascht?" class="mt-1"></textarea>
-      <button class="btn btn-secondary btn-small mt-1" onclick="saveJournalEntry(${lvlId})">💾 Jetzt speichern</button>
+      <p class="text-sm text-muted">Bevor du zum nächsten Level kannst, schreibe kurz auf, was du gelernt hast. Das hilft dir, das Gelernte besser zu behalten!</p>
+      <textarea id="journalEntry" placeholder="Was hast du in diesem Level gelernt? Was war schwierig? Was hat dich überrascht?" class="mt-1" oninput="checkJournalFilled(${lvlId})"></textarea>
       <p class="text-xs text-muted mt-1">💡 Tipp: Alle deine Einträge findest du jederzeit unter 📓 Tagebuch in der Navigation oben.</p>
     </div>
 
     <div class="card text-center">
       <div class="flex gap-sm" style="justify-content:center;flex-wrap:wrap;">
         <button class="btn btn-secondary" onclick="startLevel(${lvlId})">🔄 Wiederholen</button>
-        ${score >= 60 && lvlId < 10 ? `<button class="btn btn-primary" onclick="startLevel(${lvlId + 1})">Weiter →</button>` : ''}
+      ${score >= 60 && lvlId < 10 ? `<button class="btn btn-primary" id="nextLevelBtn" onclick="saveAndNext(${lvlId})" ${teacherMode ? '' : 'disabled style="opacity:0.4;cursor:not-allowed;"'}>📝 ${teacherMode ? 'Weiter →' : 'Erst Tagebuch ausfüllen →'}</button>` : ''}
         <button class="btn btn-secondary" onclick="showScreen('dashboard')">📊 Dashboard</button>
       </div>
+      ${score >= 60 && lvlId < 10 ? `<p class="text-xs text-muted mt-1" id="journalHint">✏️ Fülle das Lerntagebuch aus, um weiterzukommen.</p>` : ''}
     </div>
   `;
+}
+
+function checkJournalFilled(lvlId) {
+  const input = document.getElementById('journalEntry');
+  const btn = document.getElementById('nextLevelBtn');
+  const hint = document.getElementById('journalHint');
+  if (!btn) return;
+  const filled = input && input.value.trim().length >= 15;
+  btn.disabled = !filled;
+  btn.style.opacity = filled ? '1' : '0.4';
+  btn.style.cursor = filled ? 'pointer' : 'not-allowed';
+  btn.textContent = filled ? 'Weiter zum nächsten Level →' : '📝 Erst Tagebuch ausfüllen →';
+  if (hint) hint.textContent = filled ? '✅ Super! Klicke jetzt auf Weiter.' : '✏️ Schreibe mindestens einen Satz ins Tagebuch.';
+}
+
+function saveAndNext(lvlId) {
+  const input = document.getElementById('journalEntry');
+  if (teacherMode || (input && input.value.trim().length >= 15)) {
+    if (input && input.value.trim().length >= 15) {
+      S.journal.push({ date: new Date().toISOString(), level: lvlId, text: input.value.trim() });
+      saveState();
+      checkBadges();
+    }
+    startLevel(lvlId + 1);
+  } else {
+    showNotification('Bitte schreibe zuerst etwas ins Lerntagebuch!', '');
+  }
 }
 
 function saveJournalEntry(lvlId) {
