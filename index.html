@@ -2581,6 +2581,9 @@ function startLevel(lvlId) {
   currentAttempts = 0;
   simQIdx = 0;
   simQCorrect = 0;
+  ls.taskResults = {};
+  ls.taskAttempts = {};
+  ls.hintsUsed = {};
   levelStartTime = Date.now();
   ls.attempts++;
   ls.startTime = Date.now();
